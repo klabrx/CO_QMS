@@ -1,5 +1,6 @@
 library(shiny)
 library(dplyr)
+library(readr)
 
 
 # Create an empty result table with the columns
@@ -13,14 +14,16 @@ library(dplyr)
 # to be filled with the results of a successive sequence of calculations and to
 # be finally displayed as the result of the app.
 
-result <- tibble::tibble(
+result <- data.frame(
   Merkmal = character(),
   Angaben = character(),
   Anteil = numeric(),
   low = numeric(),
   med = numeric(),
-  hi = numeric()
+  hi = numeric(),
+  stringsAsFactors = FALSE  # Ensures that character columns are not converted to factors
 )
+
 
 
 
@@ -85,9 +88,9 @@ ref_groesse <- ref_groesse %>%
   mutate(options = paste0(von, " bis unter ", bis_unter))
 
 # import adress data from a csv file
-ref_adressen <- read_csv("Mietspiegel_2024/data/adr2024.csv")
+ref_adressen <- read_csv("data/adr2024.csv")
 # Korrigiere Tippfehler in allen Spalten
-ref_adressen <- typo_correction(ref_adressen)
+# ref_adressen <- typo_correction(ref_adressen)
 
 # Erstelle die WL_FAKTOR-Spalte basierend auf der WL_2024-Spalte
 ref_adressen <- ref_adressen %>%
@@ -101,6 +104,25 @@ ref_adressen <- ref_adressen %>%
     TRUE ~ NA_real_  # Falls kein passender Wert gefunden wird
   ))
 
+# Options and factors (percentage) for the year of build, to be used in the
+# selectInput "Baujahr"
+#  Erstelle ref_baujahr
+# Define year ranges and factors
+Baujahre <- tibble::tribble(
+  ~Baujahr, ~Faktor,
+  "bis 1918", 0.00,
+  "1919 - 1945", -0.07,
+  "1946 - 1977", -0.10,
+  "1978 - 1984", -0.05,
+  "1985 - 1989", -0.01,
+  "1990 - 1995", -0.01,
+  "1996 - 2004", +0.06,
+  "2005 - 2012", +0.12,
+  "2013 - 2018", +0.19,
+  "2019 - 2023", +0.24)
+
+
+
 
 # Create a shiny app frame with fixed (non-scrolling) header and footer,
 # containing two colums (width 4:8) with a sidebar and a main panel.
@@ -113,32 +135,53 @@ ref_adressen <- ref_adressen %>%
 # into results (exemplary):
 # "Größe", "64 bis unter 67 m²", 100%, 6.95, 8.37, 9.79
 # and display the result table in the main panel.
+#
+# The next dropdown is planned to be "Adresse" and will be filled with the
+# unique values of ref_adressen$STRASSE_HS. The selection will then be used
+# to determine the WL_2024 anhd the WL_Faktor. The resulting row will be
+# (e.g.): "Adresse: Abteistraße 10, Wohnlage B, -7%," plus the three values
+# lo|med|hi (results of "Groesse"), each multipied with the WL_Faktor, i.e.
+# lo = -0,49, med = -0,60, hi = -0,70.
+# The row will be attached to the results table and displayed in the main panel.
+# Additionally, append a summary row at the bottom of the result table, showing
+# "Ortsübliche Vergleichsmiete", sum(lo), sum(med), sum(hi)
+#
+# Creating the summary table needs to be separate from observing the inputs.
+# Any input to create/update its respective row in the results table.
+
 
 ui <- fluidPage(
-  titlePanel("Merkmal"),
-  sidebarLayout(
-    sidebarPanel(
-      selectizeInput("groesse", "Größe", choices = ref_groesse$options, selected = "Pflichtangabe")
-    ),
-    mainPanel(
-      tableOutput("result")
+  titlePanel("Mietspiegelrechner 2024"),
+    sidebarLayout(
+      sidebarPanel(
+        verbatimTextOutput('out4'),
+        selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
+        selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
+        selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
+        # Ask for "Sanierungsmaßnahmen" (Nein, Ja), falls "Ja", ask for "Vollsanierung ab 2013" (Nein, Ja),
+        # accept "ja" only if "Baujahr" is before 1990 (first 5 options of input$baujahr)), else "nein"
+        selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
+        selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
+      ),
+        
+      mainPanel(
+        p("Main Panel"),
+        verbatimTextOutput('groesse'),
+        verbatimTextOutput('adresse'),
+        verbatimTextOutput('baujahr')
+      )
+      
     )
-  )
+  
 )
-
 server <- function(input, output, session) {
-  observeEvent(input$groesse, {
-    result <<- tibble::tibble(
-      Merkmal = "Größe",
-      Angaben = input$groesse,
-      Anteil = 100,
-      low = ref_groesse$low[ref_groesse$options == input$groesse],
-      med = ref_groesse$med[ref_groesse$options == input$groesse],
-      hi = ref_groesse$hi[ref_groesse$options == input$groesse]
-    )
-    output$result <- renderTable(result)
-  })
+# For development purposes, print the selected values and the respective factors
+# etc. to the console
+  output$groesse <- renderPrint({input$groesse})
+  output$adresse <- renderPrint({input$adresse})
+  output$baujahr <- renderPrint({input$baujahr})
 }
+
 
 
 shinyApp(ui = ui, server = server)
