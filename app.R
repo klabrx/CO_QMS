@@ -121,6 +121,23 @@ Baujahre <- tibble::tribble(
   "2013 - 2018", +0.19,
   "2019 - 2023", +0.24)
 
+# function to take care of currency formatting
+cur <- function(value, show_plus = FALSE) {
+  # Ensure value is numeric
+  value <- as.numeric(value)
+  
+  # Format with 2 decimal places and replace decimal point with a comma
+  formatted_value <- formatC(abs(value), format = "f", digits = 2, decimal.mark = ",")
+  
+  # Determine the sign
+  if (value < 0) {
+    return(paste0("-", formatted_value))
+  } else if (value > 0 && show_plus) {
+    return(paste0("+", formatted_value))
+  } else {
+    return(paste0("", formatted_value))
+  }
+}
 
 
 
@@ -152,36 +169,89 @@ Baujahre <- tibble::tribble(
 
 ui <- fluidPage(
   titlePanel("Mietspiegelrechner 2024"),
-    sidebarLayout(
-      sidebarPanel(
-        verbatimTextOutput('out4'),
-        selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
-        selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
-        selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
-        # Ask for "Sanierungsmaßnahmen" (Nein, Ja), falls "Ja", ask for "Vollsanierung ab 2013" (Nein, Ja),
-        # accept "ja" only if "Baujahr" is before 1990 (first 5 options of input$baujahr)), else "nein"
-        selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
-        selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
-      ),
-        
-      mainPanel(
-        p("Main Panel"),
-        verbatimTextOutput('groesse'),
-        verbatimTextOutput('adresse'),
-        verbatimTextOutput('baujahr')
-      )
-      
+  sidebarLayout(
+    sidebarPanel(
+      selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
+      selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
+      selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
+      selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
+      selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
+    ),
+    
+    mainPanel(
+      p("Zusammenfassung der Angaben"),
+      htmlOutput('groesse'),
+      htmlOutput('adresse'),
+      htmlOutput('baujahr'),
+      htmlOutput('zusammenfassung')
     )
-  
+  )
 )
+
+ui <- fluidPage(
+  titlePanel("Mietspiegelrechner 2024"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
+      selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
+      selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
+      selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
+      selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
+    ),
+    
+    mainPanel(
+      p("Zusammenfassung der Angaben"),
+      htmlOutput('groesse'),
+      htmlOutput('adresse'),
+      htmlOutput('baujahr'),
+      htmlOutput('zusammenfassung')
+    )
+  )
+)
+
 server <- function(input, output, session) {
-# For development purposes, print the selected values and the respective factors
-# etc. to the console
-  output$groesse <- renderPrint({input$groesse})
-  output$adresse <- renderPrint({input$adresse})
+  # Formatting logic for Wohnungsgröße output
+  output$groesse <- renderText({
+    if (input$groesse == "Pflichtangabe" || is.null(input$groesse) || input$groesse == "") {
+      return("Bitte wählen Sie eine Wohnungsgröße aus.")
+    }
+    groesse <- ref_groesse %>% filter(options == input$groesse)
+    paste0(groesse$options, " m²: Ortsübliche Basismiete pro m² im Bereich ",
+           cur(groesse$low), " EUR < ",
+           "<b>", cur(groesse$med), " EUR</b> < ",
+           cur(groesse$hi), " EUR")
+  })
+  
+  # Formatting logic for Adresse output
+  output$adresse <- renderText({
+    if (input$adresse == "Pflichtangabe" || is.null(input$adresse) || input$adresse == "") {
+      return("Bitte wählen Sie eine Adresse aus.")
+    }
+    
+    # Find the corresponding address entry in ref_adressen
+    adresse <- ref_adressen %>% filter(STRASSE_HS == input$adresse)
+    
+    if (nrow(adresse) == 0) {
+      return("Adresse nicht gefunden.")
+    }
+    
+    # Extract WL_FAKTOR and calculate new low, med, and hi values based on Wohnungsgröße values
+    groesse <- ref_groesse %>% filter(options == input$groesse)
+    if (nrow(groesse) == 0) {
+      return("Bitte wählen Sie zuerst eine gültige Wohnungsgröße aus.")
+    }
+    
+    # Updated calculation logic for Adresse adjustments without adding 1 to WL_FAKTOR
+    low_adresse <- cur(groesse$low * adresse$WL_FAKTOR)
+    med_adresse <- cur(groesse$med * adresse$WL_FAKTOR)
+    hi_adresse <- cur(groesse$hi * adresse$WL_FAKTOR)
+    
+    paste0(adresse$STRASSE_HS, " (Wohnlage ", adresse$WL_2024, ": ",
+           cur(adresse$WL_FAKTOR * 100), "%) ergibt einen Abzug von ", low_adresse, " EUR < ",
+           "<b>", med_adresse, " EUR</b> < ", hi_adresse, " EUR")
+  })
+  
   output$baujahr <- renderPrint({input$baujahr})
 }
-
-
 
 shinyApp(ui = ui, server = server)
