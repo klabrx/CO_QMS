@@ -200,7 +200,7 @@ ui <- fluidPage(
     ),
     
     mainPanel(
-      p("Zusammenfassung der Angaben"),
+      h3("Zusammenfassung der Angaben"),
       htmlOutput('groesse'),
       htmlOutput('adresse'),
       htmlOutput('baujahr'),
@@ -249,6 +249,67 @@ server <- function(input, output, session) {
     paste0(adresse$STRASSE_HS, " (Wohnlage ", adresse$WL_2024, ": ",
            cur(adresse$WL_FAKTOR * 100), "%) ergibt einen Abzug von ", low_adresse, " EUR < ",
            "<b>", med_adresse, " EUR</b> < ", hi_adresse, " EUR")
+  })
+  
+  # Formatting logic for Baujahr output
+  output$baujahr <- renderText({
+    if (input$baujahr == "Pflichtangabe" || is.null(input$baujahr) || input$baujahr == "") {
+      return("Bitte wählen Sie ein Baujahr aus.")
+    }
+    
+    # Find the corresponding Baujahr entry in Baujahre
+    baujahr <- Baujahre %>% filter(Baujahr == input$baujahr)
+    
+    if (nrow(baujahr) == 0) {
+      return("Baujahr nicht gefunden.")
+    }
+    
+    # Find the corresponding address entry in ref_adressen
+    adresse <- ref_adressen %>% filter(STRASSE_HS == input$adresse)
+    
+    # Calculation for Baujahr adjustments 
+    low_baujahr <- cur(groesse$low * baujahr$Faktor)
+    med_baujahr <- cur(groesse$med * baujahr$Faktor)
+    hi_baujahr <- cur(groesse$hi * baujahr$Faktor)
+    
+    paste0("Ein Baujahr ", input$baujahr, " (Zu-/Abschlag: ",
+           cur(baujahr$Faktor * 100, TRUE), "%)",
+           low_baujahr, " EUR < ",
+           "<b>", med_baujahr, " EUR</b> < ",
+           hi_baujahr, " EUR")
+  })
+  
+  
+  # Zusammenfassung output based on the sum of all results so far
+  output$zusammenfassung <- renderText({
+    # Ensure that we have valid inputs for groesse and adresse
+    if (input$groesse == "Pflichtangabe" || is.null(input$groesse) || input$adresse == "Pflichtangabe" || is.null(input$adresse)) {
+      return("Bitte wählen Sie zuerst eine Wohnungsgröße und eine Adresse aus.")
+    }
+    
+    # Get groesse and adresse values
+    groesse <- ref_groesse %>% filter(options == input$groesse)
+    adresse <- ref_adressen %>% filter(STRASSE_HS == input$adresse)
+    
+    # if (nrow(groesse) == 0 || nrow(adresse) == 0) {
+    #   return("Ungültige Wohnungsgröße oder Adresse.")
+    # }
+    
+    # Calculate the summed results for lo, med, and hi
+    lo_result <- groesse$low +
+      groesse$low * adresse$WL_FAKTOR +
+      groesse$low * Baujahre$Faktor
+    med_result <- groesse$med +
+      groesse$med * adresse$WL_FAKTOR +
+      groesse$med * Baujahre$Faktor
+    hi_result <- groesse$hi +
+      groesse$hi * adresse$WL_FAKTOR +groesse$hi * Baujahre$Faktor
+    
+    # Generate the summary line
+    paste0("Die ortsübliche Vergleichsmiete liegt im Bereich: ", 
+           cur(lo_result), " EUR < ",
+           "<b>", cur(med_result), " EUR</b> < ", 
+           cur(hi_result), " EUR")
   })
   
   output$baujahr <- renderPrint({input$baujahr})
