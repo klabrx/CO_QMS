@@ -1,6 +1,7 @@
 library(shiny)
 library(dplyr)
 library(readr)
+library(DT)
 
 
 # Create an empty result table with the columns
@@ -14,16 +15,14 @@ library(readr)
 # to be filled with the results of a successive sequence of calculations and to
 # be finally displayed as the result of the app.
 
-result <- data.frame(
-  Merkmal = character(),
-  Angaben = character(),
-  Anteil = numeric(),
-  low = numeric(),
-  med = numeric(),
-  hi = numeric(),
-  stringsAsFactors = FALSE  # Ensures that character columns are not converted to factors
+result <- data.table::data.table(
+     Merkmal = c("Größe", "Adresse", "Baujahr", "Renovierung", "Ausstattung", "Zusammenfassung"),
+     Angaben = c("k.A.", "k.A.", "k.A.", "k.A.", "k.A.", "k.A."),
+      Anteil = c(0L, 0L, 0L, 0L, 0L, 0L),
+         low = c(0L, 0L, 0L, 0L, 0L, 0L),
+         med = c(0L, 0L, 0L, 0L, 0L, 0L),
+          hi = c(0L, 0L, 0L, 0L, 0L, 0L)
 )
-
 
 
 
@@ -167,26 +166,27 @@ cur <- function(value, show_plus = FALSE) {
 # Any input to create/update its respective row in the results table.
 
 
-ui <- fluidPage(
-  titlePanel("Mietspiegelrechner 2024"),
-  sidebarLayout(
-    sidebarPanel(
-      selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
-      selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
-      selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
-      selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
-      selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
-    ),
-    
-    mainPanel(
-      p("Zusammenfassung der Angaben"),
-      htmlOutput('groesse'),
-      htmlOutput('adresse'),
-      htmlOutput('baujahr'),
-      htmlOutput('zusammenfassung')
-    )
-  )
-)
+# ui <- fluidPage(
+#   titlePanel("Mietspiegelrechner 2024"),
+#   sidebarLayout(
+#     sidebarPanel(
+#       selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
+#       selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
+#       selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
+#       selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
+#       selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
+#     ),
+#     
+#     mainPanel(
+#       p("Zusammenfassung der Angaben"),
+#       htmlOutput('groesse'),
+#       htmlOutput('adresse'),
+#       htmlOutput('baujahr'),
+#       htmlOutput('zusammenfassung'),
+#       DTOutput('result_table')
+#     )
+#   )
+# )
 
 ui <- fluidPage(
   titlePanel("Mietspiegelrechner 2024"),
@@ -198,13 +198,13 @@ ui <- fluidPage(
       selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
       selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
     ),
-    
+
     mainPanel(
       h3("Zusammenfassung der Angaben"),
       htmlOutput('groesse'),
       htmlOutput('adresse'),
       htmlOutput('baujahr'),
-      htmlOutput('zusammenfassung')
+      DTOutput('result_table')
     )
   )
 )
@@ -251,7 +251,10 @@ server <- function(input, output, session) {
            "<b>", med_adresse, " EUR</b> < ", hi_adresse, " EUR")
   })
   
-  # Formatting logic for Baujahr output
+  # Logic for Baujahr output
+  # Take the input from the Baujahr dropdown
+  # create a result line similar to the groesse and adresse output
+  # and append it to the result table
   output$baujahr <- renderText({
     if (input$baujahr == "Pflichtangabe" || is.null(input$baujahr) || input$baujahr == "") {
       return("Bitte wählen Sie ein Baujahr aus.")
@@ -264,16 +267,18 @@ server <- function(input, output, session) {
       return("Baujahr nicht gefunden.")
     }
     
-    # Find the corresponding address entry in ref_adressen
-    adresse <- ref_adressen %>% filter(STRASSE_HS == input$adresse)
+    # Extract Faktor and calculate new low, med, and hi values based on Wohnungsgröße values
+    groesse <- ref_groesse %>% filter(options == input$groesse)
+    if (nrow(groesse) == 0) {
+      return("Bitte wählen Sie zuerst eine gültige Wohnungsgröße aus.")
+    }
     
-    # Calculation for Baujahr adjustments 
     low_baujahr <- cur(groesse$low * baujahr$Faktor)
     med_baujahr <- cur(groesse$med * baujahr$Faktor)
     hi_baujahr <- cur(groesse$hi * baujahr$Faktor)
     
-    paste0("Ein Baujahr ", input$baujahr, " (Zu-/Abschlag: ",
-           cur(baujahr$Faktor * 100, TRUE), "%)",
+    paste0("Baujahr ", baujahr$Baujahr, " (Faktor ",
+           cur(baujahr$Faktor * 100), "%) ergibt einen Abzug/Zuschlag von ",
            low_baujahr, " EUR < ",
            "<b>", med_baujahr, " EUR</b> < ",
            hi_baujahr, " EUR")
@@ -286,15 +291,15 @@ server <- function(input, output, session) {
     if (input$groesse == "Pflichtangabe" || is.null(input$groesse) || input$adresse == "Pflichtangabe" || is.null(input$adresse)) {
       return("Bitte wählen Sie zuerst eine Wohnungsgröße und eine Adresse aus.")
     }
-    
+
     # Get groesse and adresse values
     groesse <- ref_groesse %>% filter(options == input$groesse)
     adresse <- ref_adressen %>% filter(STRASSE_HS == input$adresse)
-    
+
     # if (nrow(groesse) == 0 || nrow(adresse) == 0) {
     #   return("Ungültige Wohnungsgröße oder Adresse.")
     # }
-    
+
     # Calculate the summed results for lo, med, and hi
     lo_result <- groesse$low +
       groesse$low * adresse$WL_FAKTOR +
@@ -304,15 +309,74 @@ server <- function(input, output, session) {
       groesse$med * Baujahre$Faktor
     hi_result <- groesse$hi +
       groesse$hi * adresse$WL_FAKTOR +groesse$hi * Baujahre$Faktor
-    
+
     # Generate the summary line
-    paste0("Die ortsübliche Vergleichsmiete liegt im Bereich: ", 
+    paste0("Die ortsübliche Vergleichsmiete liegt im Bereich: ",
            cur(lo_result), " EUR < ",
-           "<b>", cur(med_result), " EUR</b> < ", 
+           "<b>", cur(med_result), " EUR</b> < ",
            cur(hi_result), " EUR")
   })
   
-  output$baujahr <- renderPrint({input$baujahr})
+  # output$baujahr <- renderPrint({input$baujahr})
+  output$result_table <- renderDT({
+    # Format each numeric column (Anteil, low, med, hi)
+    formatted_result <- result
+    
+    # Apply formatting to each column
+    formatted_result$Anteil <- sapply(result$Anteil, function(x) {
+      if (x < 0) {
+        return(sprintf("%+.2f", x))  # Negative values
+      } else if (x == 0) {
+        return("\u00B1 0")  # Zero values with ± symbol
+      } else {
+        return(sprintf("- %.2f", x))  # Positive values with leading space and minus
+      }
+    })
+    
+    formatted_result$low <- sapply(result$low, function(x) {
+      if (x < 0) {
+        return(sprintf("%+.2f", x))  # Negative values
+      } else if (x == 0) {
+        return("\u00B1 0")  # Zero values with ± symbol
+      } else {
+        return(sprintf("- %.2f", x))  # Positive values with leading space and minus
+      }
+    })
+    
+    formatted_result$med <- sapply(result$med, function(x) {
+      if (x < 0) {
+        return(sprintf("%+.2f", x))  # Negative values
+      } else if (x == 0) {
+        return("\u00B1 0")  # Zero values with ± symbol
+      } else {
+        return(sprintf("- %.2f", x))  # Positive values with leading space and minus
+      }
+    })
+    
+    formatted_result$hi <- sapply(result$hi, function(x) {
+      if (x < 0) {
+        return(sprintf("%+.2f", x))  # Negative values
+      } else if (x == 0) {
+        return("\u00B1 0")  # Zero values with ± symbol
+      } else {
+        return(sprintf("- %.2f", x))  # Positive values with leading space and minus
+      }
+    })
+    
+    # Render the datatable with bold formatting for the last row and the 'med' column
+    datatable(formatted_result, options = list(pageLength = 6, autoWidth = TRUE, dom = 't'), rownames = FALSE) %>%
+      formatStyle(
+        'Merkmal', 
+        target = 'row',
+        fontWeight = styleEqual('Zusammenfassung', 'bold')  # Make the last row bold
+      ) %>%
+      formatStyle(
+        'med', 
+        fontWeight = 'bold'  # Make the entire 'med' column bold
+      )
+  })
+  
+  
 }
 
 shinyApp(ui = ui, server = server)
