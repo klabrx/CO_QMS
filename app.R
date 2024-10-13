@@ -120,6 +120,31 @@ Baujahre <- tibble::tribble(
   "2013 - 2018", +0.19,
   "2019 - 2023", +0.24)
 
+
+# Define the renovation items
+renovation_items <- c(
+  "Keine Sanierung/Renovierung bekannt",
+  "Vollsanierung seit 2013 (nur bei Baujahr vor 1990)",
+  "Sanitärbereich (mind. Fliesen, Wanne, WC) erneuert",
+  "Elektroinstallation (zeitgemäß) erneuert",
+  "Heizanlage/Warmwasserversorgung erneuert",
+  "Schallschutz eingebaut",
+  "Fußböden erneuert",
+  "Fenster-/Rahmenerneuerung",
+  "Innen- und Wohnungstüren erneuert",
+  "Treppenhaus, Eingangsbereich erneuert",
+  "barrierearme Ausstattung geschaffen (Mindestvoraussetzung: schwellenfrei (max. 4cm Höhe), stufenloser Zugang, bodengleiche Dusche)",
+  "Grundriss verbessert",
+  "Dachsanierung",
+  "Fassadensanierung"
+)
+
+# subset renovation items to exclude option
+# "Vollsanierung seit 2013 (nur bei Baujahr vor 1990)" react to Baujahr
+# selection and exclude this option if Baujahr is not in the range    
+
+
+
 # function to take care of currency formatting
 cur <- function(value, show_plus = FALSE) {
   # Ensure value is numeric
@@ -166,27 +191,7 @@ cur <- function(value, show_plus = FALSE) {
 # Any input to create/update its respective row in the results table.
 
 
-# ui <- fluidPage(
-#   titlePanel("Mietspiegelrechner 2024"),
-#   sidebarLayout(
-#     sidebarPanel(
-#       selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
-#       selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
-#       selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
-#       selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
-#       selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
-#     ),
-#     
-#     mainPanel(
-#       p("Zusammenfassung der Angaben"),
-#       htmlOutput('groesse'),
-#       htmlOutput('adresse'),
-#       htmlOutput('baujahr'),
-#       htmlOutput('zusammenfassung'),
-#       DTOutput('result_table')
-#     )
-#   )
-# )
+
 
 ui <- fluidPage(
   titlePanel("Mietspiegelrechner 2024"),
@@ -195,8 +200,9 @@ ui <- fluidPage(
       selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
       selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
       selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
-      selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
-      selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
+      selectInput('renovierung', 'Renovierungen', c(Pflichtangabe='', renovation_items), multiple = TRUE, selectize=TRUE)
+#      selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
+#     selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
     ),
 
     mainPanel(
@@ -204,6 +210,7 @@ ui <- fluidPage(
       htmlOutput('groesse'),
       htmlOutput('adresse'),
       htmlOutput('baujahr'),
+      htmlOutput('renovierung'),
       DTOutput('result_table')
     )
   )
@@ -284,6 +291,57 @@ server <- function(input, output, session) {
            hi_baujahr, " EUR")
   })
   
+  # Logic for output$renovierung
+  # Source for the dropdown: renovation_items as defined above
+  # multiple selections are allowed
+  # restraints:
+  # item 1 ('keine Sanierung...') and item 2 ('Vollsanierung ...') MUST stand alone,
+  # i.e. selecting one of those unselects all of the others.
+  # item 2 ('Vollsanierung ...') can only be selected if one of the first five
+  # options of 'Baujahre' is selected, input$renovierung has to observe 'Baujahre'
+  # and react accordingly i.e. a formerly valid selection 'Vollsanierung ...' 
+  # unselected if 'Baujahre is changed to a selection that does not allow
+  # 'Vollsanierung. 
+  # Items 3-14 can be multi-selected, but one one of them is selected, items 1
+  # must be deselected.
+  
+  # Observe the changes in the "Baujahr" field
+  observeEvent(input$baujahr, {
+    baujahr_selected <- input$baujahr
+    
+    # Define the default options for renovation
+    renovation_options <- renovation_items
+    
+    # If Baujahr is outside the range for "Vollsanierung", remove option 2
+    if (!baujahr_selected %in% Baujahre$Baujahr[1:5]) {
+      renovation_options <- renovation_options[!renovation_options %in% "Vollsanierung seit 2013 (nur bei Baujahr vor 1990)"]
+    }
+    
+    # Update the renovation dropdown options based on Baujahr selection
+    updateSelectInput(session, "renovierung", choices = renovation_options, selected = NULL)
+  })
+  
+  # Observe changes in the renovation input
+  observeEvent(input$renovierung, {
+    renovation_selected <- input$renovierung
+    
+    # If "Keine Sanierung" is selected, remove all other options
+    if ("Keine Sanierung/Renovierung bekannt" %in% renovation_selected) {
+      updateSelectInput(session, "renovierung", selected = "Keine Sanierung/Renovierung bekannt", choices = c("Keine Sanierung/Renovierung bekannt"))
+    }
+    
+    # If "Vollsanierung" is selected, remove all other options
+    else if ("Vollsanierung seit 2013 (nur bei Baujahr vor 1990)" %in% renovation_selected) {
+      updateSelectInput(session, "renovierung", selected = "Vollsanierung seit 2013 (nur bei Baujahr vor 1990)", choices = c("Vollsanierung seit 2013 (nur bei Baujahr vor 1990)"))
+    }
+    
+    # If any of the options 3-14 are selected, remove options 1 and 2
+    else if (any(renovation_selected %in% renovation_items[3:14])) {
+      available_options <- renovation_items[3:14]
+      updateSelectInput(session, "renovierung", choices = available_options, selected = renovation_selected)
+    }
+  })
+  
   
   # Zusammenfassung output based on the sum of all results so far
   output$zusammenfassung <- renderText({
@@ -362,6 +420,65 @@ server <- function(input, output, session) {
         return(sprintf("- %.2f", x))  # Positive values with leading space and minus
       }
     })
+    # Create an output$renovierung similar to output$groesse and output$adresse
+    # using the following factors (multiplied with the groesse results):
+    # If selection (renovierung) = "Keine Sanierung/Renovierung bekannt" : 0%
+    # If selection (renovierung) = "Vollsanierung ..." : +11%
+    # If number of selections out of options 3-14 < 3: 0%, else 6%
+    # lo/mid/hi as above
+    
+    output$renovierung <- renderText({
+      # Ensure the user has selected some renovation option
+      if (is.null(input$renovierung) || length(input$renovierung) == 0 || input$renovierung == "Pflichtangabe") {
+        return("Bitte wählen Sie eine Renovierungsoption aus.")
+      }
+      
+      # Check which renovation items were selected
+      renovierung <- renovation_items[renovation_items %in% input$renovierung]
+      
+      if (length(renovierung) == 0) {
+        return("Renovierungsoption nicht gefunden.")
+      }
+      
+      # Find the selected "groesse" (size)
+      groesse <- ref_groesse %>% filter(options == input$groesse)
+      
+      # Ensure groesse is valid before proceeding
+      if (nrow(groesse) == 0) {
+        return("Bitte wählen Sie zuerst eine gültige Wohnungsgröße aus.")
+      }
+      
+      # Determine the renovation factor:
+      # 1. "Keine Sanierung/Renovierung bekannt" -> factor = 0
+      # 2. "Vollsanierung seit 2013" -> factor = 0.11
+      # 3. 3 or more of options 3-14 -> factor = 0.06, otherwise factor = 0
+      if ("Keine Sanierung/Renovierung bekannt" %in% renovierung) {
+        factor <- 0
+      } else if ("Vollsanierung seit 2013 (nur bei Baujahr vor 1990)" %in% renovierung) {
+        factor <- 0.11
+      } else if (length(renovierung) >= 3) {
+        factor <- 0.06
+      } else {
+        factor <- 0
+      }
+      
+      # Apply the factor to calculate low, med, and high values for renovation
+      low_renovierung <- cur(groesse$low * factor)
+      med_renovierung <- cur(groesse$med * factor)
+      hi_renovierung <- cur(groesse$hi * factor)
+      
+      # Combine selected options into a string
+      selected_options <- paste(renovierung, collapse = ", ")
+      
+      # Display the selected option(s) along with the calculated values
+      paste0(selected_options, " ergibt einen Zuschlag von ",
+             low_renovierung, " EUR < ",
+             "<b>", med_renovierung, " EUR</b> < ",
+             hi_renovierung, " EUR")
+    })
+    
+    
+    
     
     # Render the datatable with bold formatting for the last row and the 'med' column
     datatable(formatted_result, options = list(pageLength = 6, autoWidth = TRUE, dom = 't'), rownames = FALSE) %>%
