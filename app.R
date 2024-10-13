@@ -2,6 +2,7 @@ library(shiny)
 library(dplyr)
 library(readr)
 library(DT)
+library(shinyBS)
 
 
 # Create an empty result table with the columns
@@ -139,9 +140,37 @@ renovation_items <- c(
   "Fassadensanierung"
 )
 
-# subset renovation items to exclude option
-# "Vollsanierung seit 2013 (nur bei Baujahr vor 1990)" react to Baujahr
-# selection and exclude this option if Baujahr is not in the range    
+# Define Sanitärausstattung items
+sanitaer_items <- c(
+  "zwei oder mehr abgeschlossene Badezimmer in der Wohnung vorhanden",
+  "zweites WC/Gäste-WC vorhanden",
+  "(separate) Einzeldusche",
+  "Fußbodenheizung",
+  "Belüftung(sanlage)",
+  "separater WC-Raum vorhanden",
+  "Handtuchheizkörper",
+  "zweites Waschbecken im selben Badezimmer"
+)
+
+ausstattung_items <- data.frame(
+  label = c("Einbauküche", "Terrasse/Dachterrasse", "Aufzug (< 5 Stockwerke)", 
+            "Parkett/Dielenboden", "Energiebedarfsklasse F, G, H", 
+            "Teppichboden (nicht modernisiert)"),
+  description = c(
+    "Einbauküche mit mindestens zwei Elektroeinbaugeräten (z. B. Herd/Ofen, Gefrierschrank/-truhe, Kühlschrank, Geschirrspülmaschine) wird vom Vermieter ohne zusätzlichen Mietzuschlag gestellt.",
+    "Terrasse oder Dachterrasse",
+    "Aufzug in Gebäuden mit weniger als 5 Stockwerken",
+    "Überwiegend Parkett-, Dielen- oder Steinfußboden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut",
+    "Energiebedarfsklasse lt. Energiebedarfsausweis lautet F, G oder H; bzw. der Wert kWh/m2a ist größer oder gleich 200",
+    "Teppichboden, PVC- oder Linoleum-Boden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut, welcher seit 2013 nicht modernisiert bzw. saniert wurde"
+  ),
+  stringsAsFactors = FALSE
+)
+
+# Convert data to list of named items for selectize
+ausstattung_choices <- setNames(as.list(ausstattung_items$label), ausstattung_items$label)
+
+
 
 
 
@@ -200,17 +229,39 @@ ui <- fluidPage(
       selectInput('groesse', 'Wohnungsgröße (m²)', c(Pflichtangabe='', ref_groesse$options), selectize=TRUE),
       selectInput('adresse', 'Adresse', c(Pflichtangabe='', unique(ref_adressen$STRASSE_HS)), selectize=TRUE),
       selectInput('baujahr', 'Baujahr', c(Pflichtangabe='', Baujahre$Baujahr), selectize=TRUE),
-      selectInput('renovierung', 'Renovierungen', c(Pflichtangabe='', renovation_items), multiple = TRUE, selectize=TRUE)
-#      selectInput('sanierung', 'Sanierungsmaßnahmen', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE),
-#     selectInput('vollsanierung', 'Vollsanierung ab 2013', c(Pflichtangabe='', 'Nein', 'Ja'), selectize=TRUE)
+      selectInput('renovierung', 'Renovierungen', c(Pflichtangabe='', renovation_items), multiple = TRUE, selectize=TRUE),
+      selectInput('sanitaer', 'Sanitärausstattung (mind. 3)', c(Pflichtangabe='', sanitaer_items), multiple = TRUE, selectize=TRUE),
+      selectizeInput(
+        'ausstattung', 
+        'Ausstattung', 
+        choices = ausstattung_choices, 
+        multiple = TRUE,
+        options = list(
+          render = I('{
+            option: function(item, escape) {
+              var descriptions = {
+                "Einbauküche": "Einbauküche mit mindestens zwei Elektroeinbaugeräten (z. B. Herd/Ofen, Gefrierschrank/-truhe, Kühlschrank, Geschirrspülmaschine) wird vom Vermieter ohne zusätzlichen Mietzuschlag gestellt.",
+                "Terrasse/Dachterrasse": "Terrasse oder Dachterrasse",
+                "Aufzug (< 5 Stockwerke)": "Aufzug in Gebäuden mit weniger als 5 Stockwerken",
+                "Parkett/Dielenboden": "Überwiegend Parkett-, Dielen- oder Steinfußboden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut",
+                "Energiebedarfsklasse F, G, H": "Energiebedarfsklasse lt. Energiebedarfsausweis lautet F, G oder H; bzw. der Wert kWh/m2a ist größer oder gleich 200",
+                "Teppichboden (nicht modernisiert)": "Teppichboden, PVC- oder Linoleum-Boden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut, welcher seit 2013 nicht modernisiert bzw. saniert wurde"
+              };
+              var description = descriptions[item.label];
+              return "<div title=\'" + escape(description) + "\'>" + escape(item.label) + "</div>";
+            }
+          }')
+        )
+      )
     ),
-
     mainPanel(
       h3("Zusammenfassung der Angaben"),
       htmlOutput('groesse'),
       htmlOutput('adresse'),
       htmlOutput('baujahr'),
       htmlOutput('renovierung'),
+      htmlOutput('sanitaer'),
+      htmlOutput('Ausstattung'),
       DTOutput('result_table')
     )
   )
@@ -493,7 +544,21 @@ server <- function(input, output, session) {
       )
   })
   
+  # # Add tooltips for each Ausstattung option
+  # lapply(seq_along(ausstattung_items), function(i) {
+  #   bsTooltip(
+  #     id = paste0("ausstattung-", i), 
+  #     title = ausstattung_tooltips[[i]],
+  #     placement = "right"
+  #   )
+  # })
   
+  # Display the selected Ausstattung
+  output$ausstattung <- renderText({
+    if (is.null(input$ausstattung) || length(input$ausstattung) == 0) {
+      return("Keine Ausstattung ausgewählt.")
+    }
+    paste("Ausgewählte Ausstattung:", paste(input$ausstattung, collapse = ", "))
+  })
 }
-
 shinyApp(ui = ui, server = server)
