@@ -17,12 +17,12 @@ library(shinyBS)
 # be finally displayed as the result of the app.
 
 result <- data.table::data.table(
-     Merkmal = c("Größe", "Adresse", "Baujahr", "Renovierung", "Ausstattung", "Zusammenfassung"),
-     Angaben = c("k.A.", "k.A.", "k.A.", "k.A.", "k.A.", "k.A."),
-      Anteil = c(0L, 0L, 0L, 0L, 0L, 0L),
-         low = c(0L, 0L, 0L, 0L, 0L, 0L),
-         med = c(0L, 0L, 0L, 0L, 0L, 0L),
-          hi = c(0L, 0L, 0L, 0L, 0L, 0L)
+     Merkmal = c("Größe", "Adresse", "Baujahr", "Renovierung", "Sanitärausstattung", "Ausstattung", "Zusammenfassung"),
+     Angaben = c("k.A.", "k.A.", "k.A.", "k.A.", "k.A.", "k.A.", "k.A."),
+      Anteil = c(0L, 0L, 0L, 0L, 0L, 0L, 0L),
+         low = c(0L, 0L, 0L, 0L, 0L, 0L, 0L),
+         med = c(0L, 0L, 0L, 0L, 0L, 0L, 0L),
+          hi = c(0L, 0L, 0L, 0L, 0L, 0L, 0L)
 )
 
 
@@ -152,10 +152,12 @@ sanitaer_items <- c(
   "zweites Waschbecken im selben Badezimmer"
 )
 
+# Define the Ausstattung items with corresponding percentages and full descriptions
 ausstattung_items <- data.frame(
   label = c("Einbauküche", "Terrasse/Dachterrasse", "Aufzug (< 5 Stockwerke)", 
             "Parkett/Dielenboden", "Energiebedarfsklasse F, G, H", 
             "Teppichboden (nicht modernisiert)"),
+  value = c(0.04, 0.06, 0.07, 0.03, -0.09, -0.11),  # Factors associated with each item
   description = c(
     "Einbauküche mit mindestens zwei Elektroeinbaugeräten (z. B. Herd/Ofen, Gefrierschrank/-truhe, Kühlschrank, Geschirrspülmaschine) wird vom Vermieter ohne zusätzlichen Mietzuschlag gestellt.",
     "Terrasse oder Dachterrasse",
@@ -167,8 +169,9 @@ ausstattung_items <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# Convert data to list of named items for selectize
+# Create a named list for the label to pass into selectizeInput
 ausstattung_choices <- setNames(as.list(ausstattung_items$label), ausstattung_items$label)
+
 
 
 
@@ -261,7 +264,7 @@ ui <- fluidPage(
       htmlOutput('baujahr'),
       htmlOutput('renovierung'),
       htmlOutput('sanitaer'),
-      htmlOutput('Ausstattung'),
+      htmlOutput('ausstattung'),
       DTOutput('result_table')
     )
   )
@@ -528,11 +531,103 @@ server <- function(input, output, session) {
              hi_renovierung, " EUR")
     })
     
+    # create output$sanitaer similar to output$groesse, output$adresse, output$baujahr
+    # using a multiplier of 6% if at least three items are selected, 0% otherwise
+    # display the selected items, then the resp. low/mid/hi values, as above
     
+    output$sanitaer <- renderText({
+      # Ensure the user has selected some Sanitärausstattung option
+      if (is.null(input$sanitaer) || length(input$sanitaer) == 0 || input$sanitaer == "Pflichtangabe") {
+        return("Bitte wählen Sie mindestens eine Sanitärausstattungsoption aus.")
+      }
+      
+      # Check which Sanitärausstattung items were selected
+      sanitaer <- sanitaer_items[sanitaer_items %in% input$sanitaer]
+      
+      if (length(sanitaer) == 0) {
+        return("Sanitärausstattungsoption nicht gefunden.")
+      }
+      
+      # Find the selected "groesse" (size)
+      groesse <- ref_groesse %>% filter(options == input$groesse)
+      
+      # Ensure groesse is valid before proceeding
+      if (nrow(groesse) == 0) {
+        return("Bitte wählen Sie zuerst eine gültige Wohnungsgröße aus.")
+      }
+      
+      # Determine the Sanitärausstattung factor:
+      # 1. 3 or more of the selected options -> factor = 0.06, otherwise factor = 0
+      if (length(sanitaer) >= 3) {
+        factor <- 0.06
+      } else {
+        factor <- 0
+      }
+      
+      # Apply the factor to calculate low, med, and high values for Sanitärausstattung
+      low_sanitaer <- cur(groesse$low * factor)
+      med_sanitaer <- cur(groesse$med * factor)
+      hi_sanitaer <- cur(groesse$hi * factor)
+      
+      # Combine selected options into a string
+      selected_options <- paste(sanitaer, collapse = ", ")
+      
+      # Display the selected option(s) along with the calculated values
+      paste0(selected_options, " ergibt einen Zuschlag von ",
+             low_sanitaer, " EUR < ",
+             "<b>", med_sanitaer, " EUR</b> < ",
+             hi_sanitaer, " EUR")
+    })
     
+    # create output$ausstattung similar to output$groesse, output$adresse, output$baujahr
+    # using the values from the 'ausstattung_items' data frame
+    # the factor that is multiplied with the groesse results is the sum of the values of the selected items
+    # display the selected items, then the resp. low/mid/hi values, as above
+    
+    output$ausstattung <- renderText({
+      # Ensure the user has selected some Ausstattung option
+      if (is.null(input$ausstattung) || length(input$ausstattung) == 0 || input$ausstattung == "Pflichtangabe") {
+        return("Bitte wählen Sie mindestens eine Ausstattungsoption aus.")
+      }
+      
+      # Check which Ausstattung items were selected
+      ausstattung <- ausstattung_items[ausstattung_items$label %in% input$ausstattung, "value"]
+      
+      if (length(ausstattung) == 0) {
+        return("Ausstattungsoption nicht gefunden.")
+      }
+      
+      # Find the selected "groesse" (size)
+      groesse <- ref_groesse %>% filter(options == input$groesse)
+      
+      # Ensure groesse is valid before proceeding
+      if (nrow(groesse) == 0) {
+        return("Bitte wählen Sie zuerst eine gültige Wohnungsgröße aus.")
+      }
+      
+      # Calculate the sum of the selected Ausstattung values
+      factor <- sum(ausstattung)
+      
+      # Apply the factor to calculate low, med, and high values for Ausstattung
+      low_ausstattung <- cur(groesse$low * factor)
+      med_ausstattung <- cur(groesse$med * factor)
+      hi_ausstattung <- cur(groesse$hi * factor)
+      
+      # Combine selected options into a string
+      selected_options <- paste(input$ausstattung, collapse = ", ")
+      
+      # Display the selected option(s) along with the calculated values
+      # then the sum of the selectred values, multiplied with the groesse results
+      # as above
+      paste0(selected_options, " ergibt einen Zuschlag von ",
+             low_ausstattung, " EUR < ",
+             "<b>", med_ausstattung, " EUR</b> < ",
+             hi_ausstattung, " EUR")
+
+    })
     
     # Render the datatable with bold formatting for the last row and the 'med' column
-    datatable(formatted_result, options = list(pageLength = 6, autoWidth = TRUE, dom = 't'), rownames = FALSE) %>%
+    datatable(formatted_result, options = list(pageLength = 7, autoWidth = TRUE, dom = 't'), rownames = FALSE) %>%
       formatStyle(
         'Merkmal', 
         target = 'row',
@@ -560,5 +655,14 @@ server <- function(input, output, session) {
     }
     paste("Ausgewählte Ausstattung:", paste(input$ausstattung, collapse = ", "))
   })
+  
+  # The empty result table needs to be filled with the results of the
+  # groesse, adresse, baujahr, renovierung, sanitaer, and ausstattung
+  # outputs. The results are to be written into the respective lines.
+  # The last line is to be the sum of the results. Use the DT 'result' table
+  # as a template and fill it with the results of the outputs.
+  
+  
+  
 }
 shinyApp(ui = ui, server = server)
