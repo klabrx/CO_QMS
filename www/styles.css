@@ -1,0 +1,71 @@
+.framed-row {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh; /* Ensures the body takes up the full height of the viewport */
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container, .consent-container {
+  max-width: 800px;
+  margin: 0 auto;
+  flex: 1; /* Ensures the main content area expands to take available space */
+  padding-bottom: 70px; /* Creates space for the footer */
+}
+
+/* Ensure that the app-container is initially hidden */
+.app-container {
+  display: none;
+}
+
+/* Ensure the consent-container is initially visible */
+.consent-container {
+  display: block;
+}
+
+/* Class for elements that should always remain visible */
+.always-visible {
+  max-width: 800px;
+  margin: 0 auto;
+  display: block;
+  background-color: #f1f1f1; /* Replace with your preferred grey shade */
+  color: #333; /* Adjust text color for contrast */
+}
+
+/* Override default background color for the consent container */
+.consent-container {
+  background-color: #f1f1f1; /* Replace with your preferred grey shade */
+  color: #333; /* Adjust text color for contrast */
+}
+
+/* If using an alert class like .alert or .alert-info, override it */
+.alert, .alert-info {
+  background-color: #f1f1f1 !important; /* Replace with your preferred grey shade */
+  border-color: #ddd !important; /* Adjust border color if needed */
+  color: #333 !important; /* Adjust text color */
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #f1f1f1; /* Adjust to match your theme */
+  border-top: 1px solid #ddd;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  z-index: 1000; /* Ensure it stays on top */
+  box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.1);
+}

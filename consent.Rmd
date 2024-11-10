@@ -1,0 +1,27 @@
+Dieser Mietspiegelrechner ist ein einfaches auf [shiny](https://shiny.posit.co) basierendes Web-Tool, um die ortsübliche Vergleichsmiete für eine Wohnung in der Stadt Passau zu berechnen. Die Berechnung beruht auf den Daten des Qualifizierten Mietspiegeld der Stadt Passau, gültig ab November 2024.
+
+### Welche Daten werden verarbeitet?
+
+Diese App erhebt und verarbeitet keinerlei personenbezogene Daten. Eine Registrierung ist nicht erforderlich, die Nutzung der App ist auch in einer anonymen Sitzung ("privates Surfen") uneingeschränkt möglich.
+
+### Cookie-Hinweise für diese Shiny-App und für OpenStreetMaps
+
+Diese App wird auf **shinyapps.io** gehostet, einer Plattform, die von Posit (ehemals RStudio) bereitgestellt wird. Für die kartografische Darstellung wird frei zugängliches Kartenmaterial von OpenStreetMaps ("OSM") über eine Web-Schnittstelle (API) genutzt. Bei der Nutzung dieser beiden Dienste werden bestimmte Daten verarbeitet, um die Funktionsfähigkeit und Benutzererfahrung sicherzustellen:
+
+-   **Notwendige technische Cookies**: shinyapps.io kann Cookies verwenden, um grundlegende Sitzungsinformationen zu speichern, die für den Betrieb der App erforderlich sind. Diese Cookies sind notwendig, um die Verbindung zwischen dem Benutzer und der App aufrechtzuerhalten. OSM verwendet in der Regel keine Cookies zur Bereitstellung der Kartendaten, speichert jedoch möglicherweise Sitzungscookies oder andere technische Daten, um die Funktionsfähigkeit der API zu gewährleisten.
+
+-   **Analysecookies**: Posit und shinyapps.io sammeln anonymisierte Nutzungsstatistiken, um die Leistung der Plattform zu überwachen und zu verbessern. Diese Statistiken enthalten keine personenbezogenen Daten.
+
+-   **Browser- und Gerätedaten**: shinyapps.io und OSM können Informationen über den Browsertyp, das Betriebssystem und andere nicht-personenbezogene Daten speichern, um die jeweiligen Dienste für verschiedene Benutzerumgebungen zu optimieren.
+
+-   **IP-Adresse**: Beim Nutzen von shinyapps.io und OSM wird Ihre IP-Adresse an die jeweiligen Server übermittelt. Dies ist notwendig, um die angeforderten Dienste bereitzustellen und die Verbindung zu ermöglichen.
+
+### Datenschutz und Sicherheit
+
+Die auf shinyapps.io gesammelten Daten unterliegen den Datenschutzrichtlinien von Posit. Weitere Informationen zu deren Datenschutzpraktiken finden Sie in der [Datenschutzerklärung von Posit](https://posit.co/legal/privacy-policy/).
+
+Weitere Informationen über die Datenschutzrichtlinien der OpenStreetMap Foundation finden Sie in der [Datenschutzerklärung der OpenStreetMap Foundation](https://wiki.osmfoundation.org/wiki/Privacy_Policy).
+
+## Zustimmung und Nutzung
+
+Indem Sie diese App nutzen und damit die Dienste von shinyapps.io und OSM in Anspruch nehmen, stimmen Sie der Verarbeitung der oben genannten Daten zu. Diese Datenverarbeitung erfolgt ausschließlich zum Zweck der Bereitstellung der Dienste und nicht zu Werbezwecken.
