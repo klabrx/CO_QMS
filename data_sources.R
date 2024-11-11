@@ -114,8 +114,8 @@ ref_renovation <- tibble::tribble(
   "Treppenhaus, Eingangsbereich erneuert", "Staircase/entrance area renovated", "all", 0.06,
   "barrierearme Ausstattung geschaffen", "Barrier-free equipment created", "all", 0.06,
   "Grundriss verbessert", "Floor plan improved", "all", 0.06,
-  "Dachsanierung", "Roof renovation", "all", 0.06,
-  "Fassadensanierung", "Facade renovation", "all", 0.06
+  "Dachsanierung (energetisch)", "Roof renovation", "all", 0.06,
+  "Fassadensanierung (energetisch)", "Facade renovation", "all", 0.06
 )
 
 # Define options for ref_sanitaer
