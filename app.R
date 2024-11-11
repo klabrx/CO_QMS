@@ -28,7 +28,8 @@ ui <- fluidPage(
   useShinyjs(),  # Enable shinyjs for JavaScript interactions
   
   tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
+    tags$script(HTML("function scrollToTop() {window.scrollTo(0, 0);}"))
   ),
   
   # Title panel wrapped in the always-visible class for consistent width and visibility
@@ -193,6 +194,14 @@ server <- function(input, output, session) {
   observeEvent(input$acceptCookies, {
     shinyjs::hide("consent-container")
     shinyjs::show("app-container")
+    runjs("scrollToTop();")  # Scroll to top when switching to app view
+  })
+  
+  # Return to consent view when the "backToConsent" button is clicked
+  observeEvent(input$backToConsent, {
+    shinyjs::hide("app-container")
+    shinyjs::show("consent-container")
+    runjs("scrollToTop();")  # Scroll to top when switching to app view
   })
 
   # Existing server logic for the app
