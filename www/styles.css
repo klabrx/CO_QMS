@@ -22,9 +22,9 @@ body {
 }
 
 /* Ensure that the app-container is initially hidden */
-.app-container {
-  display: none;
-}
+/*.app-container {*/
+/*  display: none;*/
+/*}*/
 
 /* Ensure the consent-container is initially visible */
 .consent-container {

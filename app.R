@@ -40,19 +40,19 @@ ui <- fluidPage(
     
   ),
   
-  # Consent container with app-container class for consistent width
-  div(
-    id = "consent-container",
-    class = "consent-container framed-row",
-    fluidRow(
-      column(12, tags$div(
-        class = "alert alert-info",
-        includeMarkdown("consent.Rmd"),
-        br(),  # Line break for spacing
-        actionButton("acceptCookies", "Ich stimme zu, weiter zum Mietspiegelrechner.")
-      ))
-    )
-  ),
+  # # Consent container with app-container class for consistent width
+  # div(
+  #   id = "consent-container",
+  #   class = "consent-container framed-row",
+  #   fluidRow(
+  #     column(12, tags$div(
+  #       class = "alert alert-info",
+  #       includeMarkdown("consent.Rmd"),
+  #       br(),  # Line break for spacing
+  #       actionButton("acceptCookies", "Ich stimme zu, weiter zum Mietspiegelrechner.")
+  #     ))
+  #   )
+  # ),
   
   # Main app container, hidden initially by shinyjs
   div(
@@ -62,7 +62,7 @@ ui <- fluidPage(
     
     fluidRow(
       class = "framed-row",
-      column(width = 4, selectInput("groesse", "Wohnungsgröße (m²)", c(Pflichtangabe = "", ref_groesse$options), selectize = TRUE)),
+      column(width = 4, selectInput("groesse", "Wohnungsgröße (m²)", c("", ref_groesse$options), selectize = TRUE)),
       column(width = 2, htmlOutput("groesse_info")),
       column(width = 2, div(HTML("<strong>Untere Grenze</strong>"), htmlOutput("groesse_ug"))),
       column(width = 2, div(HTML("<strong>Ortsüblich</strong>"), htmlOutput("groesse_oue"))),
@@ -73,7 +73,7 @@ ui <- fluidPage(
       class = "framed-row",
       column(
         width = 4,
-        selectizeInput("adresse", "Adresse", choices = c(Pflichtangabe = "", ref_adresse$STRASSE_HS), multiple = FALSE)
+        selectizeInput("adresse", "Adresse", choices = c("", ref_adresse$STRASSE_HS), multiple = FALSE)
       ),
       column(
         width = 8,
@@ -98,7 +98,7 @@ ui <- fluidPage(
       
       fluidRow(
         class = "framed-row",
-        column(width = 4, selectInput("baujahr", "Baujahr", c(Pflichtangabe = "", ref_baujahr$Baujahr), selectize = TRUE)),
+        column(width = 4, selectInput("baujahr", "Baujahr", c("", ref_baujahr$Baujahr), selectize = TRUE)),
         column(width = 2, htmlOutput("baujahr_info")),
         column(width = 2, htmlOutput("baujahr_ug")),
         column(width = 2, htmlOutput("baujahr_oue")),
@@ -150,7 +150,7 @@ ui <- fluidPage(
         column(
           width = 2,
           div(
-            HTML("<strong>Untere Grenze</strong>"),
+            HTML("Untere Grenze"),
             htmlOutput("sum_ug"),
             br(),  # Line break for spacing
             htmlOutput("total_ug")  # New output for total UG
@@ -168,41 +168,41 @@ ui <- fluidPage(
         column(
           width = 2,
           div(
-            HTML("<strong>Obere Grenze</strong>"),
+            HTML("Obere Grenze"),
             htmlOutput("sum_og"),
             br(),  # Line break for spacing
             htmlOutput("total_og")  # New output for total OG
           )
         )
       )
-  ),
-  # Footer section with width limit
-  div(
-    class = "footer",
-    tags$a(href = "https://www.passau.de/impressum/", target = "_blank", "Impressum"),  # Left side link
-    actionButton("backToConsent", "Zurück zu den Benutzerhinweisen"),  # Center button
-    tags$a(href = "javascript:history.back()", target = "_blank", "Zurück zur vorherigen Seite")  # Right side link
-  )
+  )#,
+  # # Footer section with width limit
+  # div(
+  #   class = "footer",
+  #   tags$a(href = "https://www.passau.de/impressum/", target = "_blank", "Impressum"),  # Left side link
+  #   actionButton("backToConsent", "Zurück zu den Benutzerhinweisen"),  # Center button
+  #   tags$a(href = "javascript:history.back()", target = "_blank", "Zurück zur vorherigen Seite")  # Right side link
+  # )
   )
 
 
 server <- function(input, output, session) {
-  # Initially hide only the app-container, not the consent-container
-  shinyjs::hide("app-container")
-  
-  # Show the main app container and hide consent container upon button click
-  observeEvent(input$acceptCookies, {
-    shinyjs::hide("consent-container")
-    shinyjs::show("app-container")
-    runjs("scrollToTop();")  # Scroll to top when switching to app view
-  })
-  
-  # Return to consent view when the "backToConsent" button is clicked
-  observeEvent(input$backToConsent, {
-    shinyjs::hide("app-container")
-    shinyjs::show("consent-container")
-    runjs("scrollToTop();")  # Scroll to top when switching to app view
-  })
+  # # Initially hide only the app-container, not the consent-container
+  # shinyjs::hide("app-container")
+  # 
+  # # Show the main app container and hide consent container upon button click
+  # observeEvent(input$acceptCookies, {
+  #   shinyjs::hide("consent-container")
+  #   shinyjs::show("app-container")
+  #   runjs("scrollToTop();")  # Scroll to top when switching to app view
+  # })
+  # 
+  # # Return to consent view when the "backToConsent" button is clicked
+  # observeEvent(input$backToConsent, {
+  #   shinyjs::hide("app-container")
+  #   shinyjs::show("consent-container")
+  #   runjs("scrollToTop();")  # Scroll to top when switching to app view
+  # })
 
   # Existing server logic for the app
   
