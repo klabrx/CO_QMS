@@ -202,3 +202,12 @@ sum_og_values <- function(groesse_og, adresse_og, baujahr_og, renovation_og, san
   sum(groesse_og, adresse_og, baujahr_og, renovation_og, sanitaer_og, ausstattung_og, na.rm = TRUE)
 }
 
+showHintIfEmpty <- function(input, input_id, hint_id, session) {
+  observe({
+    if (is.null(input[[input_id]]) || input[[input_id]] == "") {
+      shinyjs::show(hint_id)
+    } else {
+      shinyjs::hide(hint_id)
+    }
+  })
+}

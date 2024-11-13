@@ -62,26 +62,29 @@ ui <- fluidPage(
     
     fluidRow(
       class = "framed-row",
-      column(width = 4, selectInput("groesse", "Wohnungsgröße (m²)", c("", ref_groesse$options), selectize = TRUE)),
-      column(width = 2, htmlOutput("groesse_info")),
-      column(width = 2, div(HTML("<strong>Untere Grenze</strong>"), htmlOutput("groesse_ug"))),
-      column(width = 2, div(HTML("<strong>Ortsüblich</strong>"), htmlOutput("groesse_oue"))),
-      column(width = 2, div(HTML("<strong>Obere Grenze</strong>"), htmlOutput("groesse_og")))
+      column(width = 4, selectInput("groesse", "Wohnungsgröße (m²)", c("", ref_groesse$options), selectize = TRUE),
+             div(id = "groesse_hint", "Bitte wählen Sie hier den gesuchten Größenbereich aus (Wohnfläche in m² lt. Mietvertrag), z.B. '25 bis unter 26 m²' "),
+),
+      column(width = 2, br(), htmlOutput("groesse_info")),
+      column(width = 2, br(), div(HTML("<strong>Untere Grenze</strong>"), htmlOutput("groesse_ug"))),
+      column(width = 2, br(), div(HTML("<strong>Ortsüblich</strong>"), htmlOutput("groesse_oue"))),
+      column(width = 2, br(), div(HTML("<strong>Obere Grenze</strong>"), htmlOutput("groesse_og")))
     ),
     
     fluidRow(
       class = "framed-row",
       column(
         width = 4,
-        selectizeInput("adresse", "Adresse", choices = c("", ref_adresse$STRASSE_HS), multiple = FALSE)
+        selectizeInput("adresse", "Adresse", choices = c("", ref_adresse$STRASSE_HS), multiple = FALSE),
+        div(id = "adresse_hint", "Bitte geben Sie die gesuchte Adresse in das Suchfeld ein. Auch Adressbestandteile werden erkannt, z.B. führt Sie die Eingabe 'inn 76' direkt zur Innstraße 76.")
       ),
       column(
         width = 8,
         fluidRow(
-          column(width = 3, htmlOutput("adresse_info")),
-          column(width = 3, htmlOutput("adresse_ug")),
-          column(width = 3, htmlOutput("adresse_oue")),
-          column(width = 3, htmlOutput("adresse_og"))
+          column(width = 3, br(), htmlOutput("adresse_info")),
+          column(width = 3, br(), htmlOutput("adresse_ug")),
+          column(width = 3, br(), htmlOutput("adresse_oue")),
+          column(width = 3, br(), htmlOutput("adresse_og"))
         ),
         fluidRow(
           column(
@@ -98,38 +101,46 @@ ui <- fluidPage(
       
       fluidRow(
         class = "framed-row",
-        column(width = 4, selectInput("baujahr", "Baujahr", c("", ref_baujahr$Baujahr), selectize = TRUE)),
-        column(width = 2, htmlOutput("baujahr_info")),
-        column(width = 2, htmlOutput("baujahr_ug")),
-        column(width = 2, htmlOutput("baujahr_oue")),
-        column(width = 2, htmlOutput("baujahr_og"))
+        column(width = 4, selectInput("baujahr", "Baujahr", c("", ref_baujahr$Baujahr), selectize = TRUE),
+               div(id = "baujahr_hint", "Bitte geben Sie hier den Baujahresbereich des Gebäudes an, z.B. 'bis 1918' oder '1946 - 1977'.")
+        ),
+        column(width = 2, br(), htmlOutput("baujahr_info")),
+        column(width = 2, br(), htmlOutput("baujahr_ug")),
+        column(width = 2, br(), htmlOutput("baujahr_oue")),
+        column(width = 2, br(), htmlOutput("baujahr_og"))
       ),
       
       fluidRow(
         class = "framed-row",
-        column(width = 4, selectizeInput("renovierung", "Renovierung", choices = ref_renovation$Option, multiple = TRUE)),
-        column(width = 2, htmlOutput("renovierung_info")),
-        column(width = 2, htmlOutput("renovierung_ug")),
-        column(width = 2, htmlOutput("renovierung_oue")),
-        column(width = 2, htmlOutput("renovierung_og"))
+        column(width = 4, selectizeInput("renovierung", "Renovierung", choices = ref_renovation$Option, multiple = TRUE),
+               div(id = "renovierung_hint", "Bitte wählen sie hier die stattgefundenen Renovierungsmaßnahmen (bzw. 'Keine Sanierung/Renovierung bekannt') aus. Eine Vollsanierung führt nur bei Baujahren vor 1990 zu einem Zuschlag (+11%) und kann deshalb bei neueren Gebäuden nicht ausgewählt werden. Für einen Teilmodernisierungszuschlag von 6% sind mindestens drei Verbesserungen erforderlich.")
+        ),
+        column(width = 2, br(), htmlOutput("renovierung_info")),
+        column(width = 2, br(), htmlOutput("renovierung_ug")),
+        column(width = 2, br(), htmlOutput("renovierung_oue")),
+        column(width = 2, br(), htmlOutput("renovierung_og"))
       ),
       
       fluidRow(
         class = "framed-row",
-        column(width = 4, selectizeInput("sanitaer", "Sanitärausstattung", choices = ref_sanitaer, multiple = TRUE)),
-        column(width = 2, htmlOutput("sanitaer_info")),
-        column(width = 2, htmlOutput("sanitaer_ug")),
-        column(width = 2, htmlOutput("sanitaer_oue")),
-        column(width = 2, htmlOutput("sanitaer_og"))
+        column(width = 4, selectizeInput("sanitaer", "Sanitärausstattung", choices = ref_sanitaer, multiple = TRUE),
+               div(id = "sanitaer_hint", "Bitte machen Sie hier Angaben zur Sanitärausstattung (bzw. 'Keine besondere Sanitärausstattung'). Ein Zuschlag für gehobene Sanitärausstattung (6%) erfordert mindestens drei Zusatzmerkmale.")
+        ),
+        column(width = 2, br(), htmlOutput("sanitaer_info")),
+        column(width = 2, br(), htmlOutput("sanitaer_ug")),
+        column(width = 2, br(), htmlOutput("sanitaer_oue")),
+        column(width = 2, br(), htmlOutput("sanitaer_og"))
       ),
       
       fluidRow(
         class = "framed-row",
-        column(width = 4, selectizeInput("ausstattung", "Ausstattung", choices = names(ref_ausstattung), multiple = TRUE)),
-        column(width = 2, htmlOutput("ausstattung_info")),
-        column(width = 2, htmlOutput("ausstattung_ug")),
-        column(width = 2, htmlOutput("ausstattung_oue")),
-        column(width = 2, htmlOutput("ausstattung_og"))
+        column(width = 4, selectizeInput("ausstattung", "Ausstattung", choices = names(ref_ausstattung), multiple = TRUE),
+               div(id = "ausstattung_hint", "Bitte wählen Sie aus den Ausstattungsmerkmalen die zutreffenden aus. Jedes Merkmal sorgt für einen Zu- oder Abschlag, diese werden automatisch aufsummiert.")
+        ),
+        column(width = 2, br(), htmlOutput("ausstattung_info")),
+        column(width = 2, br(), htmlOutput("ausstattung_ug")),
+        column(width = 2, br(), htmlOutput("ausstattung_oue")),
+        column(width = 2, br(), htmlOutput("ausstattung_og"))
       ),
       
       fluidRow(
@@ -151,8 +162,9 @@ ui <- fluidPage(
           width = 2,
           div(
             HTML("Untere Grenze"),
+            br(), br(),  # Line break for spacing
             htmlOutput("sum_ug"),
-            br(),  # Line break for spacing
+            br(), # Line break for spacing
             htmlOutput("total_ug")  # New output for total UG
           )
         ),
@@ -160,6 +172,7 @@ ui <- fluidPage(
           width = 2,
           div(
             HTML("<strong>Ortsüblich</strong>"),
+            br(), br(),  # Line break for spacing
             htmlOutput("sum_oue"),
             br(),  # Line break for spacing
             htmlOutput("total_oue")  # New output for total OUE
@@ -169,6 +182,7 @@ ui <- fluidPage(
           width = 2,
           div(
             HTML("Obere Grenze"),
+            br(), br(),  # Line break for spacing
             htmlOutput("sum_og"),
             br(),  # Line break for spacing
             htmlOutput("total_og")  # New output for total OG
@@ -187,6 +201,14 @@ ui <- fluidPage(
 
 
 server <- function(input, output, session) {
+  
+  showHintIfEmpty(input, "adresse", "adresse_hint", session)
+  showHintIfEmpty(input, "groesse", "groesse_hint", session)
+  showHintIfEmpty(input, "baujahr", "baujahr_hint", session)  
+  showHintIfEmpty(input, "renovierung", "renovierung_hint", session)  
+  showHintIfEmpty(input, "sanitaer", "sanitaer_hint", session)
+  showHintIfEmpty(input, "ausstattung", "ausstattung_hint", session)
+  
   # # Initially hide only the app-container, not the consent-container
   # shinyjs::hide("app-container")
   # 
@@ -375,29 +397,29 @@ server <- function(input, output, session) {
   output$groesse_ug <- renderText({ format_output(renderGroesseOutput(input$groesse, "low")) })
   output$groesse_oue <- renderText({ HTML(paste0("<strong>", format_output(renderGroesseOutput(input$groesse, "med")), "</strong>")) })
   output$groesse_og <- renderText({ format_output(renderGroesseOutput(input$groesse, "hi")) })
-  output$groesse_info <- renderText({ if (is.null(input$groesse) || input$groesse == "") "Pflichtangabe fehlt" else "" })
+  output$groesse_info <- renderText({ if (is.null(input$groesse) || input$groesse == "") "Pflichtangabe" else "" })
   
-  output$adresse_info <- renderText({ if (is.null(input$adresse) || input$adresse == "") "Pflichtangabe fehlt" else generate_address_info(input$adresse) })
+  output$adresse_info <- renderText({ if (is.null(input$adresse) || input$adresse == "") "Pflichtangabe" else generate_address_info(input$adresse) })
   output$adresse_ug <- renderText({ format_output(renderAdresseOutput(input$adresse, input$groesse, "low")) })
   output$adresse_oue <- renderText({ HTML(paste0("<strong>", format_output(renderAdresseOutput(input$adresse, input$groesse, "med")), "</strong>")) })
   output$adresse_og <- renderText({ format_output(renderAdresseOutput(input$adresse, input$groesse, "hi")) })
   
-  output$baujahr_info <- renderText({ if (is.null(input$baujahr) || input$baujahr == "") "Pflichtangabe fehlt" else generate_baujahr_info(input$baujahr) })
+  output$baujahr_info <- renderText({ if (is.null(input$baujahr) || input$baujahr == "") "Pflichtangabe" else generate_baujahr_info(input$baujahr) })
   output$baujahr_ug <- renderText({ format_output(renderBaujahrOutput(input$baujahr, sum_ug_reactive())) })
   output$baujahr_oue <- renderText({ format_output(renderBaujahrOutput(input$baujahr, sum_oue_reactive())) })
   output$baujahr_og <- renderText({ format_output(renderBaujahrOutput(input$baujahr, sum_og_reactive())) })
   
-  output$renovierung_info <- renderText({ if (is.null(input$renovierung) || length(input$renovierung) == 0) "Pflichtangabe fehlt" else generate_renovation_info(input$renovierung) })
+  output$renovierung_info <- renderText({ if (is.null(input$renovierung) || length(input$renovierung) == 0) "Pflichtangabe" else generate_renovation_info(input$renovierung) })
   output$renovierung_ug <- renderText({ format_output(renderRenovationGroesseOutput(input$renovierung, sum_ug_reactive())) })
   output$renovierung_oue <- renderText({ format_output(renderRenovationGroesseOutput(input$renovierung, sum_oue_reactive())) })
   output$renovierung_og <- renderText({ format_output(renderRenovationGroesseOutput(input$renovierung, sum_og_reactive())) })
   
-  output$sanitaer_info <- renderText({ if (is.null(input$sanitaer) || length(input$sanitaer) == 0 ) "Pflichtangabe fehlt" else generate_sanitaer_info(input$sanitaer) })
+  output$sanitaer_info <- renderText({ if (is.null(input$sanitaer) || length(input$sanitaer) == 0 ) "Pflichtangabe" else generate_sanitaer_info(input$sanitaer) })
   output$sanitaer_ug <- renderText({ format_output(renderSanitaerOutput(input$sanitaer, sum_ug_reactive())) })
   output$sanitaer_oue <- renderText({ format_output(renderSanitaerOutput(input$sanitaer, sum_oue_reactive())) })
   output$sanitaer_og <- renderText({ format_output(renderSanitaerOutput(input$sanitaer, sum_og_reactive())) })
   
-  output$ausstattung_info <- renderText({ if (is.null(input$ausstattung) || length(input$ausstattung) == 0) "Pflichtangabe fehlt" else generate_ausstattung_info(input$ausstattung) })
+  output$ausstattung_info <- renderText({ if (is.null(input$ausstattung) || length(input$ausstattung) == 0) "Pflichtangabe" else generate_ausstattung_info(input$ausstattung) })
   output$ausstattung_ug <- renderText({ format_output(renderAusstattungOutput(input$ausstattung, sum_ug_reactive())) })
   output$ausstattung_oue <- renderText({ format_output(renderAusstattungOutput(input$ausstattung, sum_oue_reactive())) })
   output$ausstattung_og <- renderText({ format_output(renderAusstattungOutput(input$ausstattung, sum_og_reactive())) })
