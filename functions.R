@@ -88,7 +88,7 @@ renderRenovationGroesseOutput <- function(input_renovierung, groesse_value) {
 
 renderSanitaerOutput <- function(input_sanitaer, groesse_value) {
   # Check if "Keine besondere Sanitärausstattung" is selected and treat it as a valid 0% selection
-  if (!is.null(input_sanitaer) || "Keine besondere Sanitärausstattung" %in% input_sanitaer) {
+  if (!is.null(input_sanitaer) && "Keine besondere Sanitärausstattung" %in% input_sanitaer) {
     return(0)  # Valid selection with no surcharge
   }
   
