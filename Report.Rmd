@@ -1,0 +1,27 @@
+---
+title: "Mietspiegel der Stadt Passau, gültig ab November 2024"
+subtitle: "Bestimmung der ortsüblichen Vergleichsmiete"
+output: pdf_document
+params:
+  groesse: NULL
+  adresse: NULL
+  slider_groesse: NULL
+  baujahr: NULL
+  renovierung: NULL
+---
+
+# Angaben zur Wohnung:
+
+-   Adresse: `r params$adresse`
+    - nested item
+    - nested item
+-   Baujahr: `r params$baujahr`
+-   Größe: `r params$slider_groesse` m² (Größenbereich `r params$groesse` m²)
+-   Renovierung:
+
+    ```{r, results='asis', echo=FALSE}
+    # This will print each item in `params$renovierung` as a sub-list item, properly nested
+    for (item in params$renovierung) {
+      cat("    -", item, "\n")
+    }
+    ```

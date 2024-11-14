@@ -8,6 +8,7 @@ library(sf)
 library(leaflet)
 library(shinyjs)
 library(markdown)
+library(tinytex)
 
 source("data_sources.R")
 source("functions.R")
@@ -156,7 +157,9 @@ ui <- fluidPage(
             max = 150,  # Default upper limit (to be updated dynamically)
             value = 50,  # Initial value (can be set as desired)
             step = 0.1
-          )
+          ),
+          br(), downloadButton("downloadReport", "Download Report")
+          
         ),
         column(
           width = 2,
@@ -423,7 +426,34 @@ server <- function(input, output, session) {
   output$ausstattung_ug <- renderText({ format_output(renderAusstattungOutput(input$ausstattung, sum_ug_reactive())) })
   output$ausstattung_oue <- renderText({ format_output(renderAusstattungOutput(input$ausstattung, sum_oue_reactive())) })
   output$ausstattung_og <- renderText({ format_output(renderAusstattungOutput(input$ausstattung, sum_og_reactive())) })
-}
+
+  output$downloadReport <- downloadHandler(
+    filename = function() {
+      paste("Vergleichsmietenberechnung_", Sys.Date(), ".pdf", sep = "")
+    },
+    content = function(file) {
+      # Specify the parameters from your app
+      params <- list(
+        adresse = input$adresse,
+        groesse = input$groesse,
+        slider_groesse = input$slider_groesse,
+        baujahr = input$baujahr,
+        renovierung = input$renovierung
+        # Add other parameters as needed
+      )
+      
+      # Render the Rmd document with parameters
+      rmarkdown::render(
+        "Report.Rmd",  # Path to your Rmd file
+        output_file = file,
+        params = params,
+        envir = new.env(parent = globalenv())  # Isolate environment for rendering
+      )
+    }
+  )
+  
+  
+  }
 
 
 
