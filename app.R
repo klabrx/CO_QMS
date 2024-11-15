@@ -1,5 +1,8 @@
-# app.R
-
+# Online-Mietspiegelrechner für die Stadt Passau, programmiert 2024 auf der
+# Grundlage des vom EMA-Institut in Regensburg erstellten Regressionsmodells
+# Verwendete Software:
+  # 
+#-----
 library(shiny)
 library(dplyr)
 library(readr)
@@ -13,67 +16,87 @@ library(tinytex)
 source("data_sources.R")
 source("functions.R")
 
-# Read the shapefile
-shapefile_path <- "data/SHP/adr2024.shp"
-adr2024 <- st_read(shapefile_path)
-
-# Transform coordinates to WGS84 (lat/lon) for Leaflet compatibility if needed
-if (st_crs(adr2024)$epsg != 4326) {
-  adr2024 <- st_transform(adr2024, crs = 4326)
-}
-
-# Define color mapping for WL2024 categories
-wl_colors <- c("A" = "red", "B" = "blue", "C" = "green")
-
 ui <- fluidPage(
   useShinyjs(),  # Enable shinyjs for JavaScript interactions
-  
+
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
     tags$script(HTML("function scrollToTop() {window.scrollTo(0, 0);}"))
   ),
-  
-  # Title panel wrapped in the always-visible class for consistent width and visibility
+
+  # Title panel wrapped in the always-visible class for consistent width and
+  # visibility
   div(
     class = "always-visible",
     id = "title-container",
     titlePanel("Mietspiegelrechner 2024")
-    
   ),
-  
-  # # Consent container with app-container class for consistent width
-  # div(
-  #   id = "consent-container",
-  #   class = "consent-container framed-row",
-  #   fluidRow(
-  #     column(12, tags$div(
-  #       class = "alert alert-info",
-  #       includeMarkdown("consent.Rmd"),
-  #       br(),  # Line break for spacing
-  #       actionButton("acceptCookies", "Ich stimme zu, weiter zum Mietspiegelrechner.")
-  #     ))
-  #   )
-  # ),
-  
+
   # Main app container, hidden initially by shinyjs
   div(
     id = "app-container",
     class = "app-container",
     
+    #---- Größenbereichsauswahl ----
+    # Größenbereiche werden in data_sources.R aus externer Datei geladen und im
+    # tibble (47 x 6) 'ref_groesse' gespeichert. Struktur des tibbles:
+    # von      : int [1:47] 25 26 27 28 29 30 31 32 33 34 ...
+    # bis_unter: int [1:47] 26 27 28 29 30 31 32 33 34 35 ...
+    # low      : num [1:47] 9.84 9.66 9.48 9.32 9.17 9.03 8.9 8.78 8.67...
+    # med      : num [1:47] 11.9 11.6 11.4 11.2 11.1 ...
+    # hi       : num [1:47] 13.9 13.6 13.4 13.1 12.9 ...
+    # options  : chr [1:47] "25 bis unter 26 m²" "26 bis unter 27 m²" ...
+  
     
     fluidRow(
       class = "framed-row",
-      column(width = 4, selectInput("groesse", "Wohnungsgröße (m²)", c("", ref_groesse$options), selectize = TRUE),
-             div(id = "groesse_hint", "Bitte wählen Sie hier den gesuchten Größenbereich aus (Wohnfläche in m² lt. Mietvertrag), z.B. '25 bis unter 26 m²' "),
-),
-      column(width = 2, br(), htmlOutput("groesse_info")),
-      column(width = 2, br(), div(HTML("<strong>Untere Grenze</strong>"), htmlOutput("groesse_ug"))),
-      column(width = 2, br(), div(HTML("<strong>Ortsüblich</strong>"), htmlOutput("groesse_oue"))),
-      column(width = 2, br(), div(HTML("<strong>Obere Grenze</strong>"), htmlOutput("groesse_og")))
+      column(width = 4,
+        selectInput("groesse", "Wohnungsgröße (m²)",
+                    c("", ref_groesse$options),
+                    selectize = TRUE
+        ),
+        div(id = "groesse_hint",
+            "Bitte wählen Sie hier den gesuchten Größenbereich aus ",
+            "(Wohnfläche in m² lt. Mietvertrag), ",
+            "z.B. '25 bis unter 26 m²' "
+        ),
+      ),
+      column(width = 2, br(),
+             htmlOutput("groesse_info")
+      ),
+      column(width = 2, br(),
+             div(HTML("<strong>Untere Grenze</strong>"),
+                 htmlOutput("groesse_ug")
+              )
+      ),
+      column(width = 2, br(),
+             div(HTML("<strong>Ortsüblich</strong>"),
+                 htmlOutput("groesse_oue")
+              )
+      ),
+      column(width = 2, br(),
+             div(HTML("<strong>Obere Grenze</strong>"),
+                 htmlOutput("groesse_og")
+              )
+      )
     ),
     
+    #---- Adressenauswahl ----
+    # Adressen werden in data_sources.R aus externer Datei geladen und im 
+    # tibble (12.466 x 7) 'ref_adresse' gespeichert. Struktur des tibbles:
+    #  $ STRASSE   : chr [1:12466] "Abteistraße" "Abteistraße" "Abteistraße" ...
+    # $ ADRESS_ID : chr [1:12466] "303000002" "303000004" "303000006" ...
+    # $ STRASSE_HS: chr [1:12466] "Abteistraße 2" "Abteistraße 4" ...
+    # $ PLZ       : num [1:12466] 94034 94034 94034 94034 94034 ...
+    # $ STADTTEIL : chr [1:12466] "Grubweg" "Grubweg" "Grubweg" "Grubweg" ...
+    # $ WL_2024   : chr [1:12466] "B" "B" "B" "B" ...
+    # $ WL_FAKTOR : num [1:12466] -0.07 -0.07 -0.07 -0.07 -0.07 -0.07 -0.07 ...
+    
     fluidRow(
       class = "framed-row",
+      # linke Spalte, Breite 4 von 12, mit selectizeInput für Adressauswahl
+      # und darunter div für Hinweis (wird nach gültiger Eingabe in das Feld
+      # ausgeblendet)
       column(
         width = 4,
         selectizeInput("adresse", "Adresse", choices = c("", ref_adresse$STRASSE_HS), multiple = FALSE),
@@ -95,10 +118,7 @@ ui <- fluidPage(
         )
       )
     ),
-    
-    
-      
-
+    #---- Baujahrsauswahl -----
       
       fluidRow(
         class = "framed-row",
@@ -110,7 +130,8 @@ ui <- fluidPage(
         column(width = 2, br(), htmlOutput("baujahr_oue")),
         column(width = 2, br(), htmlOutput("baujahr_og"))
       ),
-      
+    #---- Renovierungsauswahl -----
+     
       fluidRow(
         class = "framed-row",
         column(width = 4, selectizeInput("renovierung", "Renovierung", choices = ref_renovation$Option, multiple = TRUE),
@@ -122,6 +143,8 @@ ui <- fluidPage(
         column(width = 2, br(), htmlOutput("renovierung_og"))
       ),
       
+    #---- Sanitärausstattungsauswahl -----
+    
       fluidRow(
         class = "framed-row",
         column(width = 4, selectizeInput("sanitaer", "Sanitärausstattung", choices = ref_sanitaer, multiple = TRUE),
@@ -133,6 +156,8 @@ ui <- fluidPage(
         column(width = 2, br(), htmlOutput("sanitaer_og"))
       ),
       
+    #---- Ausstattungsauswahl -----
+    
       fluidRow(
         class = "framed-row",
         column(width = 4, selectizeInput("ausstattung", "Ausstattung", choices = names(ref_ausstattung), multiple = TRUE),
@@ -144,6 +169,8 @@ ui <- fluidPage(
         column(width = 2, br(), htmlOutput("ausstattung_og"))
       ),
       
+    #---- Zusammenfassung und Spannengrenzen -----
+    
       fluidRow(
         class = "framed-row",
         column(
@@ -205,32 +232,18 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  #---- Hinweistexte bei fehlender Eingabe -----
+  # Hints werden ausgeblendet, sobald eine gültige Eingabe erfolgt ist.
   showHintIfEmpty(input, "adresse", "adresse_hint", session)
   showHintIfEmpty(input, "groesse", "groesse_hint", session)
   showHintIfEmpty(input, "baujahr", "baujahr_hint", session)  
   showHintIfEmpty(input, "renovierung", "renovierung_hint", session)  
   showHintIfEmpty(input, "sanitaer", "sanitaer_hint", session)
   showHintIfEmpty(input, "ausstattung", "ausstattung_hint", session)
-  
-  # # Initially hide only the app-container, not the consent-container
-  # shinyjs::hide("app-container")
-  # 
-  # # Show the main app container and hide consent container upon button click
-  # observeEvent(input$acceptCookies, {
-  #   shinyjs::hide("consent-container")
-  #   shinyjs::show("app-container")
-  #   runjs("scrollToTop();")  # Scroll to top when switching to app view
-  # })
-  # 
-  # # Return to consent view when the "backToConsent" button is clicked
-  # observeEvent(input$backToConsent, {
-  #   shinyjs::hide("app-container")
-  #   shinyjs::show("consent-container")
-  #   runjs("scrollToTop();")  # Scroll to top when switching to app view
-  # })
 
-  # Existing server logic for the app
-  
+
+
+ #----  
   # Render the Leaflet map based on the selected address
   output$adresse_map <- renderLeaflet({
     req(input$adresse)  # Ensure input is not NULL
@@ -241,32 +254,61 @@ server <- function(input, output, session) {
     # Filter data for the specified street
     filtered_data <- adr2024 %>% filter(STRASSE == selected_street)
     
+    # Ensure there is data to render
+    req(nrow(filtered_data) > 0)
+    
+    # Extract longitude and latitude from the geometry column
+    coords <- st_coordinates(filtered_data)
+    
+    # Calculate bounds for fitBounds()
+    lng_min <- min(coords[, 1], na.rm = TRUE)
+    lng_max <- max(coords[, 1], na.rm = TRUE)
+    lat_min <- min(coords[, 2], na.rm = TRUE)
+    lat_max <- max(coords[, 2], na.rm = TRUE)
+    
+    # Debug: Print the bounds
+    print(paste("Bounds - lng:", lng_min, "to", lng_max, "| lat:", lat_min, "to", lat_max))
+    
     # Create the leaflet map
     leaflet(data = filtered_data) %>%
       addTiles() %>%  # Add OSM tiles as background
       addCircleMarkers(
-        radius = 4,                # Standard marker size for other addresses
-        color = ~sapply(WL_2024, function(x) wl_colors[x]),  # Map colors using wl_colors
-        stroke = FALSE,            # No border for circles
-        fillOpacity = 0.8,         # Set opacity
+        radius = 4,  # Standard marker size for other addresses
+        color = ~ifelse(WL_2024 %in% names(wl_colors), wl_colors[WL_2024], "black"),  # Default to black for unexpected values
+        stroke = FALSE,  # No border for circles
+        fillOpacity = 0.8,  # Set opacity
         label = ~paste(STRASSE_HS, WL_2024),  # Label with address and WL2024 category
         group = "All Addresses"
       ) %>%
       # Highlight the selected address
       addCircleMarkers(
         data = filtered_data %>% filter(STRASSE_HS == input$adresse),
-        radius = 6,                # Larger size for highlighted address
-        color = "yellow",          # Highlight color
-        stroke = TRUE,             # Add border
+        radius = 6,  # Larger size for highlighted address
+        color = "yellow",  # Highlight color
+        stroke = TRUE,  # Add border
         weight = 2,
         fillOpacity = 1,
         label = ~paste(STRASSE_HS, "(Selected)")
       ) %>%
-      # Center the map view on the selected street
-      setView(lng = mean(st_coordinates(filtered_data)[,1]), 
-              lat = mean(st_coordinates(filtered_data)[,2]), 
-              zoom = 15)  # Adjust the zoom level for street focus
+      # Fit the map view dynamically to include all points
+      fitBounds(
+        lng1 = lng_min, lat1 = lat_min, 
+        lng2 = lng_max, lat2 = lat_max
+      ) %>%
+      # Add a legend to the map
+      addLegend(
+        position = "bottomright",  # Position of the legend
+        colors = c("yellow", wl_colors["A"], wl_colors["B"], wl_colors["C"]),  # Colors for legend
+        labels = c("Gewählte Adresse", "Lage A", "Lage B", "Lage C"),  # Labels for legend
+        title = "Wohnlagen",  # Title of the legend
+        opacity = 1  # Legend background opacity
+      )
   })
+  
+  
+  
+  
+  
   
   # Update the slider input limits based on the selected 'groesse'
   observeEvent(input$groesse, {
