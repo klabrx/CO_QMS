@@ -1,7 +1,4 @@
-# Online-Mietspiegelrechner für die Stadt Passau, programmiert 2024 auf der
-# Grundlage des vom EMA-Institut in Regensburg erstellten Regressionsmodells
-# Verwendete Software:
-  # 
+
 #-----
 library(shiny)
 library(dplyr)
@@ -219,14 +216,7 @@ ui <- fluidPage(
           )
         )
       )
-  )#,
-  # # Footer section with width limit
-  # div(
-  #   class = "footer",
-  #   tags$a(href = "https://www.passau.de/impressum/", target = "_blank", "Impressum"),  # Left side link
-  #   actionButton("backToConsent", "Zurück zu den Benutzerhinweisen"),  # Center button
-  #   tags$a(href = "javascript:history.back()", target = "_blank", "Zurück zur vorherigen Seite")  # Right side link
-  # )
+  )
   )
 
 
@@ -293,13 +283,14 @@ server <- function(input, output, session) {
       # Fit the map view dynamically to include all points
       fitBounds(
         lng1 = lng_min, lat1 = lat_min, 
-        lng2 = lng_max, lat2 = lat_max
+        lng2 = lng_max, lat2 = lat_max,
+        options = list(padding = c(20, 20, 20, 50))
       ) %>%
       # Add a legend to the map
       addLegend(
-        position = "bottomright",  # Position of the legend
+        position = "bottomleft",  # Position of the legend
         colors = c("yellow", wl_colors["A"], wl_colors["B"], wl_colors["C"]),  # Colors for legend
-        labels = c("Gewählte Adresse", "Lage A", "Lage B", "Lage C"),  # Labels for legend
+        labels = c("Ausgewählt", "Lage A", "Lage B", "Lage C"),  # Labels for legend
         title = "Wohnlagen",  # Title of the legend
         opacity = 1  # Legend background opacity
       )

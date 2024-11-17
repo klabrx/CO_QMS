@@ -204,10 +204,12 @@ sum_og_values <- function(groesse_og, adresse_og, baujahr_og, renovation_og, san
 
 showHintIfEmpty <- function(input, input_id, hint_id, session) {
   observe({
-    if (is.null(input[[input_id]]) || input[[input_id]] == "") {
+    # Check if the input is null or contains only empty strings
+    if (is.null(input[[input_id]]) || all(input[[input_id]] == "")) {
       shinyjs::show(hint_id)
     } else {
       shinyjs::hide(hint_id)
     }
   })
 }
+
