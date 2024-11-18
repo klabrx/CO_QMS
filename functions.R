@@ -213,3 +213,10 @@ showHintIfEmpty <- function(input, input_id, hint_id, session) {
   })
 }
 
+format_for_markdown_list <- function(input_vector, empty_message = "Keine Auswahl") {
+  if (!is.null(input_vector) && length(input_vector) > 0) {
+    paste("- ", input_vector, collapse = "\n")
+  } else {
+    empty_message
+  }
+}

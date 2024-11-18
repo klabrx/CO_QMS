@@ -8,20 +8,28 @@ params:
   slider_groesse: NULL
   baujahr: NULL
   renovierung: NULL
+  sanitaer: NULL
+  ausstattung: NULL
 ---
 
 # Angaben zur Wohnung:
 
--   Adresse: `r params$adresse`
-    - nested item
-    - nested item
--   Baujahr: `r params$baujahr`
--   Größe: `r params$slider_groesse` m² (Größenbereich `r params$groesse` m²)
--   Renovierung:
 
-    ```{r, results='asis', echo=FALSE}
-    # This will print each item in `params$renovierung` as a sub-list item, properly nested
-    for (item in params$renovierung) {
-      cat("    -", item, "\n")
-    }
-    ```
+## Adresse:
+`r format_for_markdown_list(params$adresse)`
+
+## Größe:
+`r format_for_markdown_list(params$slider_groesse)` m²
+- Größenbereich somit `r params$groesse`
+
+## Baujahr:
+`r format_for_markdown_list(params$baujahr)`
+
+## Sanierungszustand:
+`r format_for_markdown_list(params$renovierung)`
+
+## Sanitärausstattung:
+`r format_for_markdown_list(params$sanitaer)`
+
+## Ausstattung:
+`r format_for_markdown_list(params$ausstattung)`

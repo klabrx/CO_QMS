@@ -626,7 +626,9 @@ server <- function(input, output, session) {
         groesse = input$groesse,
         slider_groesse = input$slider_groesse,
         baujahr = input$baujahr,
-        renovierung = input$renovierung
+        renovierung = input$renovierung,
+        sanitaer = input$sanitaer,
+        ausstattung = input$ausstattung
         # Add other parameters as needed
       )
       # Render the Rmd document with parameters
