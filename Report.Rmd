@@ -1,6 +1,6 @@
 ---
-title: "Mietspiegel der Stadt Passau, gültig ab November 2024"
-subtitle: "Bestimmung der ortsüblichen Vergleichsmiete"
+title: "Ortsübliche Vergleichsmiete lt. qualifiziertem Mietspiegel"
+subtitle: "Gültig für die Stadt Passau ab November 2024"
 output: pdf_document
 params:
   groesse: NULL
@@ -10,7 +10,19 @@ params:
   renovierung: NULL
   sanitaer: NULL
   ausstattung: NULL
+  sum_ug: 0.00
 ---
+```{r echo=FALSE}
+format_for_markdown_list <- function(input_vector, empty_message = "Keine Auswahl") {
+  if (!is.null(input_vector) && length(input_vector) > 0) {
+    paste("- ", input_vector, collapse = "\n")
+  } else {
+    empty_message
+  }
+}
+```
+
+
 
 # Angaben zur Wohnung:
 
