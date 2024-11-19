@@ -255,6 +255,14 @@ ui <- fluidPage(
   )
 )
 server <- function(input, output, session) {
+  # Define global reactive values
+  global_outputs <- reactiveValues(
+    sum_ug = NULL,
+    sum_oue = NULL,
+    sum_og = NULL
+  )
+  
+  
   #---- Hinweistexte bei fehlender Eingabe -----
   # Hints werden ausgeblendet, sobald eine gültige Eingabe erfolgt ist.
   showHintIfEmpty(input, "adresse", "adresse_hint", session)
@@ -628,7 +636,8 @@ server <- function(input, output, session) {
         baujahr = input$baujahr,
         renovierung = input$renovierung,
         sanitaer = input$sanitaer,
-        ausstattung = input$ausstattung
+        ausstattung = input$ausstattung,
+        sum_ug = global_outputs$sum_ug
         # Add other parameters as needed
       )
       # Render the Rmd document with parameters
