@@ -255,14 +255,21 @@ ui <- fluidPage(
   )
 )
 server <- function(input, output, session) {
-  # Define global reactive values
-  global_outputs <- reactiveValues(
-    sum_ug = NULL,
-    sum_oue = NULL,
-    sum_og = NULL
+#---- aliases for functions
+  fv <- format_value
+  
+#---- Define global variables
+  globals <- reactiveValues(
+    groesse = list(
+      selection = NULL,
+      factor = 1,  # Default factor for groesse
+      info_text = NULL,
+      lo = NA_real_,
+      mid = NA_real_,
+      hi = NA_real_
+    )
   )
-  
-  
+
   #---- Hinweistexte bei fehlender Eingabe -----
   # Hints werden ausgeblendet, sobald eine gültige Eingabe erfolgt ist.
   showHintIfEmpty(input, "adresse", "adresse_hint", session)
@@ -271,383 +278,450 @@ server <- function(input, output, session) {
   showHintIfEmpty(input, "renovierung", "renovierung_hint", session)
   showHintIfEmpty(input, "sanitaer", "sanitaer_hint", session)
   showHintIfEmpty(input, "ausstattung", "ausstattung_hint", session)
-  #----
-  # Render the Leaflet map based on the selected address
-  output$adresse_map <- renderLeaflet({
-    req(input$adresse) # Ensure input is not NULL
-    # Extract the street name from the selected address
-    selected_street <- sub(" [0-9]+.*$", "", input$adresse)
-    # Filter data for the specified street
-    filtered_data <- adr2024 %>% filter(STRASSE == selected_street)
-    # Ensure there is data to render
-    req(nrow(filtered_data) > 0)
-    # Extract longitude and latitude from the geometry column
-    coords <- st_coordinates(filtered_data)
-    # Calculate bounds for fitBounds()
-    lng_min <- min(coords[, 1], na.rm = TRUE)
-    lng_max <- max(coords[, 1], na.rm = TRUE)
-    lat_min <- min(coords[, 2], na.rm = TRUE)
-    lat_max <- max(coords[, 2], na.rm = TRUE)
-    # Create the leaflet map
-    leaflet(data = filtered_data) %>%
-      addTiles() %>% # Add OSM tiles as background
-      addCircleMarkers(
-        radius = 4, # Standard marker size for other addresses
-        color = ~ ifelse(WL_2024 %in% names(wl_colors), wl_colors[WL_2024],
-          "black"
-        ), # Default to black for unexpected values
-        stroke = FALSE, # No border for circles
-        fillOpacity = 0.8, # Set opacity
-        label = ~ paste0(STRASSE_HS, " (", WL_2024, ")"),
-        group = "All Addresses"
-      ) %>%
-      # Highlight the selected address
-      addCircleMarkers(
-        data = filtered_data %>% filter(STRASSE_HS == input$adresse),
-        radius = 6, # Larger size for highlighted address
-        color = "yellow", # Highlight color
-        stroke = TRUE, # Add border
-        weight = 2,
-        fillOpacity = 1,
-        label = ~ paste(STRASSE_HS, "(Selected)")
-      ) %>%
-      # Fit the map view dynamically to include all points
-      fitBounds(
-        lng1 = lng_min, lat1 = lat_min,
-        lng2 = lng_max, lat2 = lat_max,
-        options = list(padding = c(20, 20, 20, 50))
-      ) %>%
-      # Add a legend to the map
-      addLegend(
-        position = "bottomleft", # Position of the legend
-        colors = c("yellow", wl_colors["A"], wl_colors["B"], wl_colors["C"]),
-        labels = c("Ausgewählt", "Lage A", "Lage B", "Lage C"),
-        title = "Wohnlagen",
-        opacity = 1
-      )
-  })
-  # Update the slider input limits based on the selected 'groesse'
+  
+#---- Section 'groesse' -----
+  # Observe input$groesse and update globals accordingly
   observeEvent(input$groesse, {
-    selected_groesse <- ref_groesse %>% filter(options == input$groesse)
-    if (nrow(selected_groesse) > 0) {
-      updateSliderInput(
-        session,
-        "slider_groesse",
-        min = selected_groesse$von,
-        max = selected_groesse$bis_unter - 0.1,
-        value = (selected_groesse$von + selected_groesse$bis_unter) / 2
-      )
+    if (!is.null(input$groesse) && input$groesse != "") {
+      selected_groesse <- ref_groesse %>% filter(options == input$groesse)
+      if (nrow(selected_groesse) > 0) {
+        globals$groesse$selection <- selected_groesse$options
+        globals$groesse$factor <- selected_groesse$mid
+        globals$groesse$info_text <- ""
+        globals$groesse$lo <- selected_groesse$low
+        globals$groesse$mid <- selected_groesse$med
+        globals$groesse$hi <- selected_groesse$hi
+        updateSliderInput(
+          session,
+          "slider_groesse",
+          min = selected_groesse$von,
+          max = selected_groesse$bis_unter - 0.1,
+          value = (selected_groesse$von + selected_groesse$bis_unter) / 2
+        )
+      }
     }
   })
-  observeEvent(input$baujahr, {
-    if (!is.null(input$baujahr) && input$baujahr != "") {
-      selected_baujahr <- input$baujahr
-      # Check if the selected Baujahr allows Vollmodernisierung
-      allow_vollmodernisierung <- selected_baujahr < 1990
-      # Update renovation options based on Baujahr
-      updateSelectizeInput(
-        session,
-        "renovierung",
-        choices = if (allow_vollmodernisierung) {
-          ref_renovation$Option # All options available
-        } else {
-          ref_renovation$Option[ref_renovation$Option !=
-            paste0(
-              "Vollmodernisierung seit 2013 (nur ",
-              "bei Baujahr vor 1990)"
-            )]
-        },
-        selected = input$renovierung # Preserve  selections where possible
-      )
-    }
-  })
-  # Define reactive expressions for sum outputs based on actual calculations
-  sum_ug_reactive <- reactive({
-    groesse_value <- renderGroesseOutput(input$groesse, "low")
-    adresse_value <- renderAdresseOutput(input$adresse, input$groesse, "low")
-    baujahr_value <- renderBaujahrOutput(input$baujahr, groesse_value)
-    renovierung_value <- renderRenovationGroesseOutput(
-      input$renovierung,
-      groesse_value
-    )
-    sanitaer_value <- renderSanitaerOutput(
-      input$sanitaer,
-      groesse_value
-    )
-    ausstattung_value <- renderAusstattungOutput(
-      input$ausstattung,
-      groesse_value
-    )
-    total_sum_ug <- sum(groesse_value,
-      adresse_value,
-      baujahr_value,
-      renovierung_value,
-      sanitaer_value,
-      ausstattung_value,
-      na.rm = TRUE
-    )
-    return(total_sum_ug)
-  })
-  sum_oue_reactive <- reactive({
-    groesse_value <- renderGroesseOutput(input$groesse, "med")
-    adresse_value <- renderAdresseOutput(input$adresse, input$groesse, "med")
-    baujahr_value <- renderBaujahrOutput(input$baujahr, groesse_value)
-    renovierung_value <- renderRenovationGroesseOutput(
-      input$renovierung,
-      groesse_value
-    )
-    sanitaer_value <- renderSanitaerOutput(
-      input$sanitaer,
-      groesse_value
-    )
-    ausstattung_value <- renderAusstattungOutput(
-      input$ausstattung,
-      groesse_value
-    )
-    total_sum_oue <- sum(groesse_value,
-      adresse_value,
-      baujahr_value,
-      renovierung_value,
-      sanitaer_value,
-      ausstattung_value,
-      na.rm = TRUE
-    )
-    return(total_sum_oue)
-  })
-  sum_og_reactive <- reactive({
-    groesse_value <- renderGroesseOutput(input$groesse, "hi")
-    adresse_value <- renderAdresseOutput(input$adresse, input$groesse, "hi")
-    baujahr_value <- renderBaujahrOutput(input$baujahr, groesse_value)
-    renovierung_value <- renderRenovationGroesseOutput(
-      input$renovierung,
-      groesse_value
-    )
-    sanitaer_value <- renderSanitaerOutput(
-      input$sanitaer,
-      groesse_value
-    )
-    ausstattung_value <- renderAusstattungOutput(
-      input$ausstattung,
-      groesse_value
-    )
-    total_sum_og <- sum(groesse_value,
-      adresse_value,
-      baujahr_value,
-      renovierung_value,
-      sanitaer_value,
-      ausstattung_value,
-      na.rm = TRUE
-    )
-    return(total_sum_og)
-  })
-  # Render the sum_ug, sum_oue, and sum_og values for display
-  # before multiplying by the slider value
-  output$sum_ug <- renderText({
-    if (!is.null(sum_ug_reactive())) {
-      paste(format_output(sum_ug_reactive()), "/m²")
-    } else {
-      "n/a"
-    }
-  })
-  output$sum_oue <- renderText({
-    if (!is.null(sum_oue_reactive())) {
-      paste(format_output(sum_oue_reactive()), "/m²")
-    } else {
-      "n/a"
-    }
-  })
-  output$sum_og <- renderText({
-    if (!is.null(sum_og_reactive())) {
-      paste(format_output(sum_og_reactive()), "/m²")
-    } else {
-      "n/a"
-    }
-  })
-  # Calculate total UG based on slider and sum_ug
-  output$total_ug <- renderText({
-    if (!is.null(input$slider_groesse) && !is.null(sum_ug_reactive())) {
-      result <- input$slider_groesse * sum_ug_reactive()
-      paste(format_output(result))
-    } else {
-      "n/a"
-    }
-  })
-  # Calculate total OUE based on slider and sum_oue
-  output$total_oue <- renderText({
-    if (!is.null(input$slider_groesse) && !is.null(sum_oue_reactive())) {
-      result <- input$slider_groesse * sum_oue_reactive()
-      paste(format_output(result))
-    } else {
-      "n/a"
-    }
-  })
-  # Calculate total OG based on slider and sum_og
-  output$total_og <- renderText({
-    if (!is.null(input$slider_groesse) && !is.null(sum_og_reactive())) {
-      result <- input$slider_groesse * sum_og_reactive()
-      paste(format_output(result))
-    } else {
-      "n/a"
-    }
-  })
-  # Additional outputs for other sections
-  # (e.g., 'groesse', 'baujahr', 'renovierung', etc.)
-  # *_ug, *_oue, *_og are used to display the low, med, and high values
+  
+  # Render all groesse outputs based on globals
   output$groesse_info <- renderText({
-    if (is.null(input$groesse) || input$groesse == "") {
-      "Pflichtangabe"
-    } else {
-      ""
-    }
+    globals$groesse$info_text
   })
+  
   output$groesse_ug <- renderText({
-    format_output(renderGroesseOutput(input$groesse, "low"))
+    if (!is.na(globals$groesse$lo)) {
+      fv(globals$groesse$lo, " €/m²")
+    } else {
+      "->"
+    }
   })
+  
   output$groesse_oue <- renderText({
-    HTML(paste0(
-      "<strong>",
-      format_output(renderGroesseOutput(input$groesse, "med")),
-      "</strong>"
-    ))
+    if (!is.na(globals$groesse$mid)) {
+      fv(globals$groesse$mid, " €/m²")
+    } else {
+      "Auswahl fehlt"
+    }
   })
+  
   output$groesse_og <- renderText({
-    format_output(renderGroesseOutput(input$groesse, "hi"))
-  })
-  output$adresse_info <- renderText({
-    if (is.null(input$adresse) || input$adresse == "") {
-      "Pflichtangabe"
+    if (!is.na(globals$groesse$hi)) {
+      fv(globals$groesse$hi, " €/m²")
     } else {
-      generate_address_info(input$adresse)
+      "<-"
     }
   })
-  output$adresse_ug <- renderText({
-    format_output(renderAdresseOutput(input$adresse, input$groesse, "low"))
-  })
-  output$adresse_oue <- renderText({
-    HTML(paste0(
-      "<strong>",
-      format_output(renderAdresseOutput(
-        input$adresse,
-        input$groesse, "med"
-      )),
-      "</strong>"
-    ))
-  })
-  output$adresse_og <- renderText({
-    format_output(renderAdresseOutput(input$adresse, input$groesse, "hi"))
-  })
-  output$baujahr_info <- renderText({
-    if (is.null(input$baujahr) || input$baujahr == "") {
-      "Pflichtangabe"
-    } else {
-      generate_baujahr_info(input$baujahr)
-    }
-  })
-  output$baujahr_ug <- renderText({
-    format_output(renderBaujahrOutput(input$baujahr, sum_ug_reactive()))
-  })
-  output$baujahr_oue <- renderText({
-    format_output(renderBaujahrOutput(input$baujahr, sum_oue_reactive()))
-  })
-  output$baujahr_og <- renderText({
-    format_output(renderBaujahrOutput(input$baujahr, sum_og_reactive()))
-  })
-  output$renovierung_info <- renderText({
-    if (is.null(input$renovierung) || length(input$renovierung) == 0) {
-      "Pflichtangabe"
-    } else {
-      generate_renovation_info(input$renovierung)
-    }
-  })
-  output$renovierung_ug <- renderText({
-    format_output(renderRenovationGroesseOutput(
-      input$renovierung,
-      sum_ug_reactive()
-    ))
-  })
-  output$renovierung_oue <- renderText({
-    format_output(renderRenovationGroesseOutput(
-      input$renovierung,
-      sum_oue_reactive()
-    ))
-  })
-  output$renovierung_og <- renderText({
-    format_output(renderRenovationGroesseOutput(
-      input$renovierung,
-      sum_og_reactive()
-    ))
-  })
-  output$sanitaer_info <- renderText({
-    if (is.null(input$sanitaer) || length(input$sanitaer) == 0) {
-      "Pflichtangabe"
-    } else {
-      generate_sanitaer_info(input$sanitaer)
-    }
-  })
-  output$sanitaer_ug <- renderText({
-    format_output(renderSanitaerOutput(input$sanitaer, sum_ug_reactive()))
-  })
-  output$sanitaer_oue <- renderText({
-    format_output(renderSanitaerOutput(input$sanitaer, sum_oue_reactive()))
-  })
-  output$sanitaer_og <- renderText({
-    format_output(
-      renderSanitaerOutput(
-        input$sanitaer,
-        sum_og_reactive()
-      )
-    )
-  })
-  output$ausstattung_info <- renderText({
-    if (is.null(input$ausstattung) || length(input$ausstattung) == 0) {
-      "Pflichtangabe"
-    } else {
-      generate_ausstattung_info(input$ausstattung)
-    }
-  })
-  output$ausstattung_ug <- renderText({
-    format_output(renderAusstattungOutput(
-      input$ausstattung,
-      sum_ug_reactive()
-    ))
-  })
-  output$ausstattung_oue <- renderText({
-    format_output(renderAusstattungOutput(
-      input$ausstattung,
-      sum_oue_reactive()
-    ))
-  })
-  output$ausstattung_og <- renderText({
-    format_output(renderAusstattungOutput(
-      input$ausstattung,
-      sum_og_reactive()
-    ))
-  })
-  output$downloadReport <- downloadHandler(
-    filename = function() {
-      paste("Vergleichsmietenberechnung_", Sys.Date(), ".pdf", sep = "")
-    },
-    content = function(file) {
-      # Specify the parameters from your app
-      params <- list(
-        adresse = input$adresse,
-        groesse = input$groesse,
-        slider_groesse = input$slider_groesse,
-        baujahr = input$baujahr,
-        renovierung = input$renovierung,
-        sanitaer = input$sanitaer,
-        ausstattung = input$ausstattung,
-        sum_ug = global_outputs$sum_ug
-        # Add other parameters as needed
-      )
-      # Render the Rmd document with parameters
-      rmarkdown::render(
-        "Report.Rmd", # Path to your Rmd file
-        output_file = file,
-        params = params,
-        envir = new.env(parent = globalenv()) # Isolate env for rendering
-      )
-    }
-  )
+  
+  
+  
+  
+  
+  
+  # # Define global reactive values
+  # global_outputs <- reactiveValues(
+  #   sum_ug = NULL,
+  #   sum_oue = NULL,
+  #   sum_og = NULL
+  # )
+  # 
+  # 
+
+  # #----
+  # # Render the Leaflet map based on the selected address
+  # output$adresse_map <- renderLeaflet({
+  #   req(input$adresse) # Ensure input is not NULL
+  #   # Extract the street name from the selected address
+  #   selected_street <- sub(" [0-9]+.*$", "", input$adresse)
+  #   # Filter data for the specified street
+  #   filtered_data <- adr2024 %>% filter(STRASSE == selected_street)
+  #   # Ensure there is data to render
+  #   req(nrow(filtered_data) > 0)
+  #   # Extract longitude and latitude from the geometry column
+  #   coords <- st_coordinates(filtered_data)
+  #   # Calculate bounds for fitBounds()
+  #   lng_min <- min(coords[, 1], na.rm = TRUE)
+  #   lng_max <- max(coords[, 1], na.rm = TRUE)
+  #   lat_min <- min(coords[, 2], na.rm = TRUE)
+  #   lat_max <- max(coords[, 2], na.rm = TRUE)
+  #   # Create the leaflet map
+  #   leaflet(data = filtered_data) %>%
+  #     addTiles() %>% # Add OSM tiles as background
+  #     addCircleMarkers(
+  #       radius = 4, # Standard marker size for other addresses
+  #       color = ~ ifelse(WL_2024 %in% names(wl_colors), wl_colors[WL_2024],
+  #         "black"
+  #       ), # Default to black for unexpected values
+  #       stroke = FALSE, # No border for circles
+  #       fillOpacity = 0.8, # Set opacity
+  #       label = ~ paste0(STRASSE_HS, " (", WL_2024, ")"),
+  #       group = "All Addresses"
+  #     ) %>%
+  #     # Highlight the selected address
+  #     addCircleMarkers(
+  #       data = filtered_data %>% filter(STRASSE_HS == input$adresse),
+  #       radius = 6, # Larger size for highlighted address
+  #       color = "yellow", # Highlight color
+  #       stroke = TRUE, # Add border
+  #       weight = 2,
+  #       fillOpacity = 1,
+  #       label = ~ paste(STRASSE_HS, "(Selected)")
+  #     ) %>%
+  #     # Fit the map view dynamically to include all points
+  #     fitBounds(
+  #       lng1 = lng_min, lat1 = lat_min,
+  #       lng2 = lng_max, lat2 = lat_max,
+  #       options = list(padding = c(20, 20, 20, 50))
+  #     ) %>%
+  #     # Add a legend to the map
+  #     addLegend(
+  #       position = "bottomleft", # Position of the legend
+  #       colors = c("yellow", wl_colors["A"], wl_colors["B"], wl_colors["C"]),
+  #       labels = c("Ausgewählt", "Lage A", "Lage B", "Lage C"),
+  #       title = "Wohnlagen",
+  #       opacity = 1
+  #     )
+  # })
+  # # # Update the slider input limits based on the selected 'groesse'
+  # # observeEvent(input$groesse, {
+  # #   selected_groesse <- ref_groesse %>% filter(options == input$groesse)
+  # #   if (nrow(selected_groesse) > 0) {
+  # #     updateSliderInput(
+  # #       session,
+  # #       "slider_groesse",
+  # #       min = selected_groesse$von,
+  # #       max = selected_groesse$bis_unter - 0.1,
+  # #       value = (selected_groesse$von + selected_groesse$bis_unter) / 2
+  # #     )
+  # #   }
+  # # })
+  # observeEvent(input$baujahr, {
+  #   if (!is.null(input$baujahr) && input$baujahr != "") {
+  #     selected_baujahr <- input$baujahr
+  #     # Check if the selected Baujahr allows Vollmodernisierung
+  #     allow_vollmodernisierung <- selected_baujahr < "1990"
+  #     # Update renovation options based on Baujahr
+  #     updateSelectizeInput(
+  #       session,
+  #       "renovierung",
+  #       choices = if (allow_vollmodernisierung) {
+  #         ref_renovation$Option # All options available
+  #       } else {
+  #         ref_renovation$Option[ref_renovation$Option !=
+  #           paste0(
+  #             "Vollmodernisierung seit 2013 (nur ",
+  #             "bei Baujahr vor 1990)"
+  #           )]
+  #       },
+  #       selected = input$renovierung # Preserve  selections where possible
+  #     )
+  #   }
+  # })
+  # # Define reactive expressions for sum outputs based on actual calculations
+  # sum_ug_reactive <- reactive({
+  #   groesse_value <- renderGroesseOutput(input$groesse, "low")
+  #   adresse_value <- renderAdresseOutput(input$adresse, input$groesse, "low")
+  #   baujahr_value <- renderBaujahrOutput(input$baujahr, groesse_value)
+  #   renovierung_value <- renderRenovationGroesseOutput(
+  #     input$renovierung,
+  #     groesse_value
+  #   )
+  #   sanitaer_value <- renderSanitaerOutput(
+  #     input$sanitaer,
+  #     groesse_value
+  #   )
+  #   ausstattung_value <- renderAusstattungOutput(
+  #     input$ausstattung,
+  #     groesse_value
+  #   )
+  #   total_sum_ug <- sum(groesse_value,
+  #     adresse_value,
+  #     baujahr_value,
+  #     renovierung_value,
+  #     sanitaer_value,
+  #     ausstattung_value,
+  #     na.rm = TRUE
+  #   )
+  #   return(total_sum_ug)
+  # })
+  # sum_oue_reactive <- reactive({
+  #   groesse_value <- renderGroesseOutput(input$groesse, "med")
+  #   adresse_value <- renderAdresseOutput(input$adresse, input$groesse, "med")
+  #   baujahr_value <- renderBaujahrOutput(input$baujahr, groesse_value)
+  #   renovierung_value <- renderRenovationGroesseOutput(
+  #     input$renovierung,
+  #     groesse_value
+  #   )
+  #   sanitaer_value <- renderSanitaerOutput(
+  #     input$sanitaer,
+  #     groesse_value
+  #   )
+  #   ausstattung_value <- renderAusstattungOutput(
+  #     input$ausstattung,
+  #     groesse_value
+  #   )
+  #   total_sum_oue <- sum(groesse_value,
+  #     adresse_value,
+  #     baujahr_value,
+  #     renovierung_value,
+  #     sanitaer_value,
+  #     ausstattung_value,
+  #     na.rm = TRUE
+  #   )
+  #   return(total_sum_oue)
+  # })
+  # sum_og_reactive <- reactive({
+  #   groesse_value <- renderGroesseOutput(input$groesse, "hi")
+  #   adresse_value <- renderAdresseOutput(input$adresse, input$groesse, "hi")
+  #   baujahr_value <- renderBaujahrOutput(input$baujahr, groesse_value)
+  #   renovierung_value <- renderRenovationGroesseOutput(
+  #     input$renovierung,
+  #     groesse_value
+  #   )
+  #   sanitaer_value <- renderSanitaerOutput(
+  #     input$sanitaer,
+  #     groesse_value
+  #   )
+  #   ausstattung_value <- renderAusstattungOutput(
+  #     input$ausstattung,
+  #     groesse_value
+  #   )
+  #   total_sum_og <- sum(groesse_value,
+  #     adresse_value,
+  #     baujahr_value,
+  #     renovierung_value,
+  #     sanitaer_value,
+  #     ausstattung_value,
+  #     na.rm = TRUE
+  #   )
+  #   return(total_sum_og)
+  # })
+  # # Render the sum_ug, sum_oue, and sum_og values for display
+  # # before multiplying by the slider value
+  # output$sum_ug <- renderText({
+  #   if (!is.null(sum_ug_reactive())) {
+  #     paste(format_output(sum_ug_reactive()), "/m²")
+  #   } else {
+  #     "n/a"
+  #   }
+  # })
+  # output$sum_oue <- renderText({
+  #   if (!is.null(sum_oue_reactive())) {
+  #     paste(format_output(sum_oue_reactive()), "/m²")
+  #   } else {
+  #     "n/a"
+  #   }
+  # })
+  # output$sum_og <- renderText({
+  #   if (!is.null(sum_og_reactive())) {
+  #     paste(format_output(sum_og_reactive()), "/m²")
+  #   } else {
+  #     "n/a"
+  #   }
+  # })
+  # # Calculate total UG based on slider and sum_ug
+  # output$total_ug <- renderText({
+  #   if (!is.null(input$slider_groesse) && !is.null(sum_ug_reactive())) {
+  #     result <- input$slider_groesse * sum_ug_reactive()
+  #     paste(format_output(result))
+  #   } else {
+  #     "n/a"
+  #   }
+  # })
+  # # Calculate total OUE based on slider and sum_oue
+  # output$total_oue <- renderText({
+  #   if (!is.null(input$slider_groesse) && !is.null(sum_oue_reactive())) {
+  #     result <- input$slider_groesse * sum_oue_reactive()
+  #     paste(format_output(result))
+  #   } else {
+  #     "n/a"
+  #   }
+  # })
+  # # Calculate total OG based on slider and sum_og
+  # output$total_og <- renderText({
+  #   if (!is.null(input$slider_groesse) && !is.null(sum_og_reactive())) {
+  #     result <- input$slider_groesse * sum_og_reactive()
+  #     paste(format_output(result))
+  #   } else {
+  #     "n/a"
+  #   }
+  # })
+  # # Additional outputs for other sections
+  # # (e.g., 'groesse', 'baujahr', 'renovierung', etc.)
+  # # *_ug, *_oue, *_og are used to display the low, med, and high values
+  # output$groesse_info <- renderText({
+  #   if (is.null(input$groesse) || input$groesse == "") {
+  #     "Pflichtangabe"
+  #   } else {
+  #     ""
+  #   }
+  # })
+  # output$groesse_ug <- renderText({
+  #   format_output(renderGroesseOutput(input$groesse, "low"))
+  # })
+  # output$groesse_oue <- renderText({
+  #   HTML(paste0(
+  #     "<strong>",
+  #     format_output(renderGroesseOutput(input$groesse, "med")),
+  #     "</strong>"
+  #   ))
+  # })
+  # output$groesse_og <- renderText({
+  #   format_output(renderGroesseOutput(input$groesse, "hi"))
+  # })
+  # output$adresse_info <- renderText({
+  #   if (is.null(input$adresse) || input$adresse == "") {
+  #     "Pflichtangabe"
+  #   } else {
+  #     generate_address_info(input$adresse)
+  #   }
+  # })
+  # output$adresse_ug <- renderText({
+  #   format_output(renderAdresseOutput(input$adresse, input$groesse, "low"))
+  # })
+  # output$adresse_oue <- renderText({
+  #   HTML(paste0(
+  #     "<strong>",
+  #     format_output(renderAdresseOutput(
+  #       input$adresse,
+  #       input$groesse, "med"
+  #     )),
+  #     "</strong>"
+  #   ))
+  # })
+  # output$adresse_og <- renderText({
+  #   format_output(renderAdresseOutput(input$adresse, input$groesse, "hi"))
+  # })
+  # output$baujahr_info <- renderText({
+  #   if (is.null(input$baujahr) || input$baujahr == "") {
+  #     "Pflichtangabe"
+  #   } else {
+  #     generate_baujahr_info(input$baujahr)
+  #   }
+  # })
+  # output$baujahr_ug <- renderText({
+  #   format_output(renderBaujahrOutput(input$baujahr, sum_ug_reactive()))
+  # })
+  # output$baujahr_oue <- renderText({
+  #   format_output(renderBaujahrOutput(input$baujahr, sum_oue_reactive()))
+  # })
+  # output$baujahr_og <- renderText({
+  #   format_output(renderBaujahrOutput(input$baujahr, sum_og_reactive()))
+  # })
+  # output$renovierung_info <- renderText({
+  #   if (is.null(input$renovierung) || length(input$renovierung) == 0) {
+  #     "Pflichtangabe"
+  #   } else {
+  #     generate_renovation_info(input$renovierung)
+  #   }
+  # })
+  # output$renovierung_ug <- renderText({
+  #   format_output(renderRenovationGroesseOutput(
+  #     input$renovierung,
+  #     sum_ug_reactive()
+  #   ))
+  # })
+  # output$renovierung_oue <- renderText({
+  #   format_output(renderRenovationGroesseOutput(
+  #     input$renovierung,
+  #     sum_oue_reactive()
+  #   ))
+  # })
+  # output$renovierung_og <- renderText({
+  #   format_output(renderRenovationGroesseOutput(
+  #     input$renovierung,
+  #     sum_og_reactive()
+  #   ))
+  # })
+  # output$sanitaer_info <- renderText({
+  #   if (is.null(input$sanitaer) || length(input$sanitaer) == 0) {
+  #     "Pflichtangabe"
+  #   } else {
+  #     generate_sanitaer_info(input$sanitaer)
+  #   }
+  # })
+  # output$sanitaer_ug <- renderText({
+  #   format_output(renderSanitaerOutput(input$sanitaer, sum_ug_reactive()))
+  # })
+  # output$sanitaer_oue <- renderText({
+  #   format_output(renderSanitaerOutput(input$sanitaer, sum_oue_reactive()))
+  # })
+  # output$sanitaer_og <- renderText({
+  #   format_output(
+  #     renderSanitaerOutput(
+  #       input$sanitaer,
+  #       sum_og_reactive()
+  #     )
+  #   )
+  # })
+  # output$ausstattung_info <- renderText({
+  #   if (is.null(input$ausstattung) || length(input$ausstattung) == 0) {
+  #     "Pflichtangabe"
+  #   } else {
+  #     generate_ausstattung_info(input$ausstattung)
+  #   }
+  # })
+  # output$ausstattung_ug <- renderText({
+  #   format_output(renderAusstattungOutput(
+  #     input$ausstattung,
+  #     sum_ug_reactive()
+  #   ))
+  # })
+  # output$ausstattung_oue <- renderText({
+  #   format_output(renderAusstattungOutput(
+  #     input$ausstattung,
+  #     sum_oue_reactive()
+  #   ))
+  # })
+  # output$ausstattung_og <- renderText({
+  #   format_output(renderAusstattungOutput(
+  #     input$ausstattung,
+  #     sum_og_reactive()
+  #   ))
+  # })
+  # output$downloadReport <- downloadHandler(
+  #   filename = function() {
+  #     paste("Vergleichsmietenberechnung_", Sys.Date(), ".pdf", sep = "")
+  #   },
+  #   content = function(file) {
+  #     # Specify the parameters from your app
+  #     params <- list(
+  #       adresse = input$adresse,
+  #       groesse = input$groesse,
+  #       slider_groesse = input$slider_groesse,
+  #       baujahr = input$baujahr,
+  #       renovierung = input$renovierung,
+  #       sanitaer = input$sanitaer,
+  #       ausstattung = input$ausstattung,
+  #       sum_ug = global_outputs$sum_ug
+  #       # Add other parameters as needed
+  #     )
+  #     # Render the Rmd document with parameters
+  #     rmarkdown::render(
+  #       "Report.Rmd", # Path to your Rmd file
+  #       output_file = file,
+  #       params = params,
+  #       envir = new.env(parent = globalenv()) # Isolate env for rendering
+  #     )
+  #   }
+  # )
 }
 shinyApp(ui = ui, server = server)

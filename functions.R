@@ -1,5 +1,22 @@
 # functions.R
 
+#---- function for formatting numerics to 2 decimals, german punctuation
+#.    and a chosen unit
+
+format_value <- function(value, unit = "") {
+  if (is.na(value)) {
+    return("NA")
+  }
+  formatted_value <- format(
+    value,
+    nsmall = 2,         # Always show two decimal places
+    big.mark = ".",     # Use a dot for thousand separators
+    decimal.mark = ","  # Use a comma for the decimal point
+  )
+  paste0(formatted_value, unit)
+}
+
+
 # Format to create percentage results
 format_percentage <- function(value) {
   if (value < 0) {

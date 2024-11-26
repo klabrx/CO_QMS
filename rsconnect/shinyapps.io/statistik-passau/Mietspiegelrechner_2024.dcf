@@ -1,0 +1,13 @@
+name: Mietspiegelrechner_2024
+title: Mietspiegelrechner_2024
+username: statistik-passau
+account: statistik-passau
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13291894
+bundleId: 9398527
+url: https://statistik-passau.shinyapps.io/Mietspiegelrechner_2024/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Report.pdf|Report.Rmd|scripts/define_options.R|scripts/load_data.R|scripts/prepApp.R|scripts/prepRef.R|scripts/scripts.md|src/src.md|Testbed.R
