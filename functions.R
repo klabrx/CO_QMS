@@ -8,7 +8,7 @@ format_value <- function(value, unit = "") {
     return("NA")
   }
   formatted_value <- format(
-    value,
+    round(value, 2),   # round to two decimal before formatting
     nsmall = 2,         # Always show two decimal places
     big.mark = ".",     # Use a dot for thousand separators
     decimal.mark = ","  # Use a comma for the decimal point

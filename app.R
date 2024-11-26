@@ -267,6 +267,13 @@ server <- function(input, output, session) {
       lo = NA_real_,
       mid = NA_real_,
       hi = NA_real_
+    ),
+    adresse = list(
+      selection = NULL,
+      info_text = NULL,
+      factor = 0,  # Default to no adjustment (0%)
+      Lage = NULL,
+      map = NULL
     )
   )
 
@@ -332,7 +339,166 @@ server <- function(input, output, session) {
   })
   
   
+#---- Section 'adresse' -----
+  # Observe input$adresse and update globals accordingly
+  observeEvent(input$adresse, {
+    if (!is.null(input$adresse) && input$adresse != "") {
+      selected_adresse <- ref_adresse %>% filter(STRASSE_HS == input$adresse)
+      if (nrow(selected_adresse) > 0) {
+        globals$adresse$selection <- selected_adresse$STRASSE_HS
+        globals$adresse$factor <- selected_adresse$WL_FAKTOR
+        globals$adresse$Lage <- selected_adresse$WL_2024
+      }
+    }
+  })
   
+  
+  # Render all adresse outputs based on globals$groesse * globals$adresse$factor
+  
+  output$adresse_ug <- renderText({
+    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$lo)) {
+      adjusted_value <- globals$groesse$lo * globals$adresse$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "->"
+    }
+  })
+  
+  output$adresse_oue <- renderText({
+    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$mid)) {
+      adjusted_value <- globals$groesse$mid * globals$adresse$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "Auswahl fehlt"
+    }
+  })
+  
+  output$adresse_og <- renderText({
+    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$hi)) {
+      adjusted_value <- globals$groesse$hi * globals$adresse$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "<-"
+    }
+  })
+  
+  output$adresse_info <- renderText({
+    if (is.null(input$adresse) || input$adresse == "") {
+      ""
+    } else {
+      paste("Lage ", globals$adresse$Lage,
+            "<br>",
+            "(", fv(globals$adresse$factor * 100, " %"),")")
+    }
+  })
+  
+  #---- Section 'adresse' -----
+  
+  # Observe input$adresse and update globals accordingly
+  observeEvent(input$adresse, {
+    if (!is.null(input$adresse) && input$adresse != "") {
+      selected_adresse <- ref_adresse %>% filter(STRASSE_HS == input$adresse)
+      if (nrow(selected_adresse) > 0) {
+        globals$adresse$selection <- selected_adresse$STRASSE_HS
+        globals$adresse$factor <- selected_adresse$WL_FAKTOR
+        globals$adresse$Lage <- selected_adresse$WL_2024
+        
+        # Filter data for the specified street
+        selected_street <- sub(" [0-9]+.*$", "", globals$adresse$selection)
+        filtered_data <- adr2024 %>% filter(STRASSE == selected_street)
+        req(nrow(filtered_data) > 0)
+        
+        # Create and store the Leaflet map in globals
+        coords <- st_coordinates(filtered_data)
+        lng_min <- min(coords[, 1], na.rm = TRUE)
+        lng_max <- max(coords[, 1], na.rm = TRUE)
+        lat_min <- min(coords[, 2], na.rm = TRUE)
+        lat_max <- max(coords[, 2], na.rm = TRUE)
+        globals$adresse$map <- leaflet(data = filtered_data) %>%
+          addTiles() %>%
+          addCircleMarkers(
+            radius = 4,
+            color = ~ ifelse(WL_2024 %in% names(wl_colors), wl_colors[WL_2024], "black"),
+            stroke = FALSE,
+            fillOpacity = 0.8,
+            label = ~ paste0(STRASSE_HS, " (", WL_2024, ")"),
+            group = "All Addresses"
+          ) %>%
+          addCircleMarkers(
+            data = filtered_data %>% filter(STRASSE_HS == globals$adresse$selection),
+            radius = 6,
+            color = "yellow",
+            stroke = TRUE,
+            weight = 2,
+            fillOpacity = 1,
+            label = ~ paste(STRASSE_HS, "(Selected)")
+          ) %>%
+          fitBounds(
+            lng1 = lng_min, lat1 = lat_min,
+            lng2 = lng_max, lat2 = lat_max,
+            options = list(padding = c(20, 20, 20, 50))
+          ) %>%
+          addLegend(
+            position = "bottomleft",
+            colors = c("yellow", wl_colors["A"], wl_colors["B"], wl_colors["C"]),
+            labels = c("Ausgewählt", "Lage A", "Lage B", "Lage C"),
+            title = "Wohnlagen",
+            opacity = 1
+          )
+      }
+    } else {
+      globals$adresse$selection <- NULL
+      globals$adresse$factor <- 0
+      globals$adresse$Lage <- NULL
+      globals$adresse$map <- NULL
+    }
+  })
+  
+  # Render all adresse outputs based on globals$groesse * globals$adresse$factor
+  output$adresse_ug <- renderText({
+    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$lo)) {
+      adjusted_value <- globals$groesse$lo * globals$adresse$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "->"
+    }
+  })
+  
+  output$adresse_oue <- renderText({
+    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$mid)) {
+      adjusted_value <- globals$groesse$mid * globals$adresse$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "Auswahl fehlt"
+    }
+  })
+  
+  output$adresse_og <- renderText({
+    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$hi)) {
+      adjusted_value <- globals$groesse$hi * globals$adresse$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "<-"
+    }
+  })
+  
+  output$adresse_info <- renderUI({
+    if (is.null(globals$adresse$selection) || globals$adresse$selection == "") {
+      ""
+    } else {
+      HTML(
+        paste("Lage ", globals$adresse$Lage,
+              "<br>",
+              "(", fv(globals$adresse$factor * 100, " %"), ")")
+      )
+    }
+  })
+  
+  # Render the Leaflet map using the globalized map
+  output$adresse_map <- renderLeaflet({
+    req(globals$adresse$map) # Ensure the map exists
+    globals$adresse$map
+  })
   
   
   
@@ -346,60 +512,7 @@ server <- function(input, output, session) {
   # 
 
   # #----
-  # # Render the Leaflet map based on the selected address
-  # output$adresse_map <- renderLeaflet({
-  #   req(input$adresse) # Ensure input is not NULL
-  #   # Extract the street name from the selected address
-  #   selected_street <- sub(" [0-9]+.*$", "", input$adresse)
-  #   # Filter data for the specified street
-  #   filtered_data <- adr2024 %>% filter(STRASSE == selected_street)
-  #   # Ensure there is data to render
-  #   req(nrow(filtered_data) > 0)
-  #   # Extract longitude and latitude from the geometry column
-  #   coords <- st_coordinates(filtered_data)
-  #   # Calculate bounds for fitBounds()
-  #   lng_min <- min(coords[, 1], na.rm = TRUE)
-  #   lng_max <- max(coords[, 1], na.rm = TRUE)
-  #   lat_min <- min(coords[, 2], na.rm = TRUE)
-  #   lat_max <- max(coords[, 2], na.rm = TRUE)
-  #   # Create the leaflet map
-  #   leaflet(data = filtered_data) %>%
-  #     addTiles() %>% # Add OSM tiles as background
-  #     addCircleMarkers(
-  #       radius = 4, # Standard marker size for other addresses
-  #       color = ~ ifelse(WL_2024 %in% names(wl_colors), wl_colors[WL_2024],
-  #         "black"
-  #       ), # Default to black for unexpected values
-  #       stroke = FALSE, # No border for circles
-  #       fillOpacity = 0.8, # Set opacity
-  #       label = ~ paste0(STRASSE_HS, " (", WL_2024, ")"),
-  #       group = "All Addresses"
-  #     ) %>%
-  #     # Highlight the selected address
-  #     addCircleMarkers(
-  #       data = filtered_data %>% filter(STRASSE_HS == input$adresse),
-  #       radius = 6, # Larger size for highlighted address
-  #       color = "yellow", # Highlight color
-  #       stroke = TRUE, # Add border
-  #       weight = 2,
-  #       fillOpacity = 1,
-  #       label = ~ paste(STRASSE_HS, "(Selected)")
-  #     ) %>%
-  #     # Fit the map view dynamically to include all points
-  #     fitBounds(
-  #       lng1 = lng_min, lat1 = lat_min,
-  #       lng2 = lng_max, lat2 = lat_max,
-  #       options = list(padding = c(20, 20, 20, 50))
-  #     ) %>%
-  #     # Add a legend to the map
-  #     addLegend(
-  #       position = "bottomleft", # Position of the legend
-  #       colors = c("yellow", wl_colors["A"], wl_colors["B"], wl_colors["C"]),
-  #       labels = c("Ausgewählt", "Lage A", "Lage B", "Lage C"),
-  #       title = "Wohnlagen",
-  #       opacity = 1
-  #     )
-  # })
+  
   # # # Update the slider input limits based on the selected 'groesse'
   # # observeEvent(input$groesse, {
   # #   selected_groesse <- ref_groesse %>% filter(options == input$groesse)
