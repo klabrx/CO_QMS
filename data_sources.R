@@ -34,7 +34,7 @@ ref_adresse <- ref_adresse %>%
 
 # Define Baujahr reference data
 ref_baujahr <- tibble::tribble(
-  ~Baujahr, ~Factor,
+  ~Baujahr, ~Faktor,
   "1918 und älter", 0.00,
   "1919 - 1945", -0.07,
   "1946 - 1977", -0.10,

@@ -274,6 +274,26 @@ server <- function(input, output, session) {
       factor = 0,  # Default to no adjustment (0%)
       Lage = NULL,
       map = NULL
+    ),
+    baujahr = list(
+      selection = NULL,
+      info_text = NULL,
+      factor = 0  # Default to no adjustment (0%)
+    ),
+    renovierung = list(
+      selection = NULL,
+      info_text = NULL,
+      factor = 0  # Default to no adjustment (0%)
+    ),
+    sanitaer = list(
+      selection = NULL,
+      info_text = NULL,
+      factor = 0  # Default to no adjustment (0%)
+    ),
+    ausstattung = list(
+      selection = NULL,
+      info_text = NULL,
+      factor = 0  # Default to no adjustment (0%)
     )
   )
 
@@ -339,60 +359,8 @@ server <- function(input, output, session) {
   })
   
   
+
 #---- Section 'adresse' -----
-  # Observe input$adresse and update globals accordingly
-  observeEvent(input$adresse, {
-    if (!is.null(input$adresse) && input$adresse != "") {
-      selected_adresse <- ref_adresse %>% filter(STRASSE_HS == input$adresse)
-      if (nrow(selected_adresse) > 0) {
-        globals$adresse$selection <- selected_adresse$STRASSE_HS
-        globals$adresse$factor <- selected_adresse$WL_FAKTOR
-        globals$adresse$Lage <- selected_adresse$WL_2024
-      }
-    }
-  })
-  
-  
-  # Render all adresse outputs based on globals$groesse * globals$adresse$factor
-  
-  output$adresse_ug <- renderText({
-    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$adresse$factor
-      fv(adjusted_value, " €/m²")
-    } else {
-      "->"
-    }
-  })
-  
-  output$adresse_oue <- renderText({
-    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$adresse$factor
-      fv(adjusted_value, " €/m²")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
-  
-  output$adresse_og <- renderText({
-    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$adresse$factor
-      fv(adjusted_value, " €/m²")
-    } else {
-      "<-"
-    }
-  })
-  
-  output$adresse_info <- renderText({
-    if (is.null(input$adresse) || input$adresse == "") {
-      ""
-    } else {
-      paste("Lage ", globals$adresse$Lage,
-            "<br>",
-            "(", fv(globals$adresse$factor * 100, " %"),")")
-    }
-  })
-  
-  #---- Section 'adresse' -----
   
   # Observe input$adresse and update globals accordingly
   observeEvent(input$adresse, {
@@ -500,6 +468,76 @@ server <- function(input, output, session) {
     globals$adresse$map
   })
   
+  #---- Section 'baujahr' -----
+  observeEvent(input$baujahr, {
+    if (!is.null(input$baujahr) && input$baujahr != "") {
+      selected_baujahr <- ref_baujahr %>% filter(Baujahr == input$baujahr)
+      if (nrow(selected_baujahr) > 0) {
+        globals$baujahr$selection <- selected_baujahr$Baujahr
+        globals$baujahr$factor <- selected_baujahr$Faktor
+        globals$baujahr$info_text <- paste(
+          globals$baujahr$selection,
+          "<br>",
+          "(", fv(globals$baujahr$factor * 100, " %", TRUE), ")"
+        )
+      }
+    } else {
+      # Reset globals$baujahr if no selection is made
+      globals$baujahr$selection <- NULL
+      globals$baujahr$factor <- NULL
+      globals$baujahr$info_text <- "-> keine Auswahl <-"
+    }
+  })
+  
+
+  
+  # Render all baujahr outputs based on globals$groesse * globals$baujahr$factor
+    output$baujahr_info <- renderText({
+      globals$baujahr$info_text
+    })
+    
+    output$baujahr_ug <- renderText({
+      if (!is.null(globals$baujahr$selection) &&
+          !is.null(globals$baujahr$factor) &&
+          !is.na(globals$groesse$lo)) {
+        adjusted_value <- globals$groesse$lo * globals$baujahr$factor
+        fv(adjusted_value, " €/m²", TRUE)
+      } else {
+        "->"
+      }
+    })
+    
+    output$baujahr_oue <- renderText({
+      if (!is.null(globals$baujahr$selection) &&
+          !is.null(globals$baujahr$factor) &&
+          !is.na(globals$groesse$mid)) {
+        adjusted_value <- globals$groesse$mid * globals$baujahr$factor
+        fv(adjusted_value, " €/m²", TRUE)
+      } else {
+        "Auswahl fehlt"
+      }
+    })
+    
+    output$baujahr_og <- renderText({
+      if (!is.null(globals$baujahr$selection) &&
+          !is.null(globals$baujahr$factor) &&
+          !is.na(globals$groesse$hi)) {
+        adjusted_value <- globals$groesse$hi * globals$baujahr$factor
+        fv(adjusted_value, " €/m²", TRUE)
+      } else {
+        "<-"
+      }
+    })
+    
+    output$baujahr_info <- renderText({
+      if (!is.null(globals$baujahr$selection)) {
+        globals$baujahr$info_text
+      } else {
+        ""
+      }
+    })
+    
+    
   
   
   # # Define global reactive values
