@@ -134,7 +134,7 @@ ref_sanitaer <- c(
 # Define Ausstattung items with corresponding percentages
 ref_ausstattung <- list(
   "Keine besondere Ausstattung" = 0.00,
-  "Einbauküche mit mindestens zwei Elektroeinbaugeräten (z. B. Herd/Ofen, Gefrierschrank/-truhe, Kühlschrank, Geschirrspülmaschine) wird vom Vermieter ohne zusätzlichen Mietzuschlag gestellt. (+4%)" = 0.04,
+  "Einbauküche mit mindestens drei Elektroeinbaugeräten (z. B. Herd/Ofen, Gefrierschrank/-truhe, Kühlschrank, Geschirrspülmaschine) wird vom Vermieter ohne zusätzlichen Mietzuschlag gestellt. (+4%)" = 0.04,
   "Terrasse oder Dachterrasse (+6%)" = 0.06,
   "Aufzug in Gebäuden mit weniger als 5 Stockwerken (+7%)" = 0.07,
   "Überwiegend Parkett-, Dielen- oder Steinfußboden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut (+3%)" = 0.03,
