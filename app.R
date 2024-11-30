@@ -468,76 +468,89 @@ server <- function(input, output, session) {
     globals$adresse$map
   })
   
-  #---- Section 'baujahr' -----
+#---- Section 'baujahr' -----
+  # 'baujahr is handled exactly the same way as 'adresse':
+  # Observe input$baujahr and update globals accordingly
+  # Use -> Auswahl fehlt <- as default value for missing selections
+   
   observeEvent(input$baujahr, {
     if (!is.null(input$baujahr) && input$baujahr != "") {
       selected_baujahr <- ref_baujahr %>% filter(Baujahr == input$baujahr)
       if (nrow(selected_baujahr) > 0) {
         globals$baujahr$selection <- selected_baujahr$Baujahr
         globals$baujahr$factor <- selected_baujahr$Faktor
-        globals$baujahr$info_text <- paste(
-          globals$baujahr$selection,
-          "<br>",
-          "(", fv(globals$baujahr$factor * 100, " %", TRUE), ")"
-        )
+        globals$baujahr$info_text <- ""
       }
     } else {
-      # Reset globals$baujahr if no selection is made
       globals$baujahr$selection <- NULL
-      globals$baujahr$factor <- NULL
-      globals$baujahr$info_text <- "-> keine Auswahl <-"
+      globals$baujahr$factor <- 0
     }
   })
   
-
-  
   # Render all baujahr outputs based on globals$groesse * globals$baujahr$factor
-    output$baujahr_info <- renderText({
-      globals$baujahr$info_text
-    })
+  output$baujahr_ug <- renderText({
+    if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$lo)) {
+      adjusted_value <- globals$groesse$lo * globals$baujahr$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "->"
+    }
+  })
+  
+  output$baujahr_oue <- renderText({
+    if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$mid)) {
+      adjusted_value <- globals$groesse$mid * globals$baujahr$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "Auswahl fehlt"
+    }
+  })
+  
+  output$baujahr_og <- renderText({
+    if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$hi)) {
+      adjusted_value <- globals$groesse$hi * globals$baujahr$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "<-"
+    }
+  })
+  
+  output$baujahr_info <- renderText({
+    if (is.null(globals$baujahr$selection) || globals$baujahr$selection == "") {
+      ""
+    } else {
+      HTML(
+        paste(fv(globals$baujahr$factor * 100, " %"))
+      )
+    }
+  })
     
-    output$baujahr_ug <- renderText({
-      if (!is.null(globals$baujahr$selection) &&
-          !is.null(globals$baujahr$factor) &&
-          !is.na(globals$groesse$lo)) {
-        adjusted_value <- globals$groesse$lo * globals$baujahr$factor
-        fv(adjusted_value, " €/m²", TRUE)
-      } else {
-        "->"
-      }
-    })
-    
-    output$baujahr_oue <- renderText({
-      if (!is.null(globals$baujahr$selection) &&
-          !is.null(globals$baujahr$factor) &&
-          !is.na(globals$groesse$mid)) {
-        adjusted_value <- globals$groesse$mid * globals$baujahr$factor
-        fv(adjusted_value, " €/m²", TRUE)
-      } else {
-        "Auswahl fehlt"
-      }
-    })
-    
-    output$baujahr_og <- renderText({
-      if (!is.null(globals$baujahr$selection) &&
-          !is.null(globals$baujahr$factor) &&
-          !is.na(globals$groesse$hi)) {
-        adjusted_value <- globals$groesse$hi * globals$baujahr$factor
-        fv(adjusted_value, " €/m²", TRUE)
-      } else {
-        "<-"
-      }
-    })
-    
-    output$baujahr_info <- renderText({
-      if (!is.null(globals$baujahr$selection)) {
-        globals$baujahr$info_text
-      } else {
-        ""
-      }
-    })
-    
-    
+  
+  #----- Render Report
+  output$download_report <- downloadHandler(
+    filename = function() {
+      paste("app_globals_report", Sys.Date(), ".pdf", sep = "")
+    },
+    content = function(file) {
+      # Render the R Markdown file
+      rmarkdown::render(
+        input = "Report.Rmd",             # Path to the R Markdown template
+        output_file = file,               # Specify the output file
+        params = list(globals = reactiveValuesToList(globals)),  # Pass globals as params
+        envir = new.env(parent = globalenv())  # Use a clean environment
+      )
+    },
+    contentType = "application/pdf"  # Explicitly set content type to PDF
+  )
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   # # Define global reactive values

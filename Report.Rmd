@@ -1,47 +1,42 @@
 ---
-title: "Ortsübliche Vergleichsmiete lt. qualifiziertem Mietspiegel"
-subtitle: "Gültig für die Stadt Passau ab November 2024"
+title: "App Globals Report"
 output: pdf_document
 params:
-  groesse: NULL
-  adresse: NULL
-  slider_groesse: NULL
-  baujahr: NULL
-  renovierung: NULL
-  sanitaer: NULL
-  ausstattung: NULL
-  sum_ug: 0.00
+  globals: NULL
 ---
-```{r echo=FALSE}
-format_for_markdown_list <- function(input_vector, empty_message = "Keine Auswahl") {
-  if (!is.null(input_vector) && length(input_vector) > 0) {
-    paste("- ", input_vector, collapse = "\n")
-  } else {
-    empty_message
-  }
-}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# App Globals Report
 
+## Globals Overview
 
-# Angaben zur Wohnung:
+### Groesse
+- Selection: `r params$globals$groesse$selection`
+- Factor: `r params$globals$groesse$factor`
+- Info Text: `r params$globals$groesse$info_text`
+- Lower Bound (ug): `r params$globals$groesse$lo`
+- Middle Value (oue): `r params$globals$groesse$mid`
+- Upper Bound (og): `r params$globals$groesse$hi`
 
+---
 
-## Adresse:
-`r format_for_markdown_list(params$adresse)`
+### Baujahr
+- Selection: `r params$globals$baujahr$selection`
+- Factor: `r params$globals$baujahr$factor`
+- Info Text: `r params$globals$baujahr$info_text`
 
-## Größe:
-`r format_for_markdown_list(params$slider_groesse)` m²
-- Größenbereich somit `r params$groesse`
+---
 
-## Baujahr:
-`r format_for_markdown_list(params$baujahr)`
+### Renovation
+- Selection: `r paste(params$globals$renovation$selection, collapse = ", ")`
+- Factor: `r params$globals$renovation$factor`
+- Info Text: `r params$globals$renovation$info_text`
 
-## Sanierungszustand:
-`r format_for_markdown_list(params$renovierung)`
+---
 
-## Sanitärausstattung:
-`r format_for_markdown_list(params$sanitaer)`
+## Additional Notes
 
-## Ausstattung:
-`r format_for_markdown_list(params$ausstattung)`
+The above reflects the current state of the application’s globals.
