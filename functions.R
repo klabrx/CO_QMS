@@ -53,7 +53,7 @@ get_numeric_value <- function(text) {
   as.numeric(gsub(",", ".", gsub(" EUR", "", text)))
 }
 
-# Generate output for Groesse selection based on low/med/hi columns
+# Generate output for Groesse selection based on low/mid/hi columns
 renderGroesseOutput <- function(input_value, column_name) {
   groesse_row <- ref_groesse %>% filter(options == input_value)
   if (nrow(groesse_row) == 0) return(0)

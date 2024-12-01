@@ -1,6 +1,6 @@
 ---
 title: "App Globals Report"
-output: pdf_document
+output: html_document
 params:
   globals: NULL
 ---
@@ -9,34 +9,51 @@ params:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# App Globals Report
+# Mietspiegel der Stadt Passau, gültig ab November 2024
 
-## Globals Overview
+## Bestimmung der ortsüblichen Vergleichsmiete für Wohnraum auf der Grundlage folgender Angaben:
 
-### Groesse
-- Selection: `r params$globals$groesse$selection`
-- Factor: `r params$globals$groesse$factor`
-- Info Text: `r params$globals$groesse$info_text`
-- Lower Bound (ug): `r params$globals$groesse$lo`
-- Middle Value (oue): `r params$globals$groesse$mid`
-- Upper Bound (og): `r params$globals$groesse$hi`
+### Wohnungsgröße
+- **Auswahl:** `r params$globals$groesse$selection`
+- **Info Text:** `r params$globals$groesse$info_text`
+- **Untere Spannengrenze (ug):** `r params$globals$groesse$lo`
+- **Ortsübliche Vergleichsmiete (oue):** `r params$globals$groesse$mid`
+- **Obere Spannengrenze (og):** `r params$globals$groesse$hi`
+
+---
+
+### Wohnlage
+- **Adressauswahl:** `r params$globals$adresse$selection`
+- **Wohnlage somit:** `r params$globals$adresse$Lage`
+- **Faktor:** `r params$globals$adresse$factor`
+
+### Lageplan
+
+```{r, echo=FALSE}
+if (!is.null(params$globals$adresse$map)) {
+  params$globals$adresse$map
+} else {
+  "No map available for the selected address."
+}
+```
 
 ---
 
 ### Baujahr
-- Selection: `r params$globals$baujahr$selection`
-- Factor: `r params$globals$baujahr$factor`
-- Info Text: `r params$globals$baujahr$info_text`
+- **Auswahl:** `r params$globals$baujahr$selection`
+- **Faktor:** `r params$globals$baujahr$factor`
+- **Info Text:** `r params$globals$baujahr$info_text`
 
 ---
 
-### Renovation
-- Selection: `r paste(params$globals$renovation$selection, collapse = ", ")`
-- Factor: `r params$globals$renovation$factor`
-- Info Text: `r params$globals$renovation$info_text`
+### Renovierung
+- **Auswahl:** `r paste(params$globals$renovation$selection, collapse = ", ")`
+- **Faktor:** `r params$globals$renovation$factor`
+- **Info Text:** `r params$globals$renovation$info_text`
 
 ---
 
-## Additional Notes
-
-The above reflects the current state of the application’s globals.
+### Ausstattung
+- **Auswahl:** `r paste(params$globals$ausstattung$selection, collapse = ", ")`
+- **Faktor:** `r params$globals$ausstattung$factor`
+- **Info Text:** `r params$globals$ausstattung$info_text`

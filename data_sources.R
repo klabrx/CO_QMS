@@ -49,7 +49,7 @@ ref_baujahr <- tibble::tribble(
 
 # Define reference_groesse with all ranges included
 ref_groesse <- tibble::tribble(
-  ~von, ~bis_unter, ~low, ~med, ~hi, ~options,
+  ~von, ~bis_unter, ~low, ~mid, ~hi, ~options,
   25L, 26L, 9.84, 11.86, 13.88, "25 bis unter 26 m²",
   26L, 27L, 9.66, 11.64, 13.61, "26 bis unter 27 m²",
   27L, 28L, 9.48, 11.43, 13.37, "27 bis unter 28 m²",
