@@ -102,20 +102,20 @@ ref_groesse <- tibble::tribble(
 # Define renovation options and their conditions
 ref_renovation <- tibble::tribble(
   ~Option, ~Description, ~Allowed_Baujahr_Range, ~Value,
-  "Keine Sanierung/Renovierung bekannt", "No known renovation", "all", 0.00,
-  "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)", "Complete renovation since 2013", "<1990", 0.11,
-  "Sanitärbereich (mind. Fliesen, Wanne, WC) erneuert", "Bathroom renovation (tiles, bathtub, WC)", "all", 0.06,
-  "Elektroinstallation (zeitgemäß) erneuert", "Updated electrical installation", "all", 0.06,
-  "Heizanlage/Warmwasserversorgung erneuert", "Heating system/hot water updated", "all", 0.06,
-  "Schallschutz eingebaut", "Soundproofing added", "all", 0.06,
-  "Fußböden erneuert", "Floors renovated", "all", 0.06,
-  "Fenster-/Rahmenerneuerung", "Window/frame renovation", "all", 0.06,
-  "Innen- und Wohnungstüren erneuert", "Internal doors replaced", "all", 0.06,
-  "Treppenhaus, Eingangsbereich erneuert", "Staircase/entrance area renovated", "all", 0.06,
-  "barrierearme Ausstattung geschaffen", "Barrier-free equipment created", "all", 0.06,
-  "Grundriss verbessert", "Floor plan improved", "all", 0.06,
-  "Dachsanierung (energetisch)", "Roof renovation", "all", 0.06,
-  "Fassadensanierung (energetisch)", "Facade renovation", "all", 0.06
+  "Keine Sanierung/Renovierung bekannt", "Keine Renovierung", "all", 0.00,
+  "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)", "Vollrenovierung", "<1990", 0.11,
+  "Sanitärbereich (mind. Fliesen, Wanne, WC) erneuert", "Bad renoviert", "all", 0.06,
+  "Elektroinstallation (zeitgemäß) erneuert", "Elektrik erneuert", "all", 0.06,
+  "Heizanlage/Warmwasserversorgung erneuert", "Heizung erneuert", "all", 0.06,
+  "Schallschutz eingebaut", "Schallschutz", "all", 0.06,
+  "Fußböden erneuert", "Fußböden erneuert", "all", 0.06,
+  "Fenster-/Rahmenerneuerung", "Fenster erneuert", "all", 0.06,
+  "Innen- und Wohnungstüren erneuert", "Innentüren ersetzt", "all", 0.06,
+  "Treppenhaus, Eingangsbereich erneuert", "Treppenhaus/Eingang erneuert", "all", 0.06,
+  "barrierearme Ausstattung geschaffen", "barrierearm erneuert", "all", 0.06,
+  "Grundriss verbessert", "Grundriss verbessert", "all", 0.06,
+  "Dachsanierung (energetisch)", "Dachisolierung", "all", 0.06,
+  "Fassadensanierung (energetisch)", "Fassadenisolierung", "all", 0.06
 )
 
 # Define options for ref_sanitaer

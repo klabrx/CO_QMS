@@ -299,6 +299,16 @@ server <- function(input, output, session) {
       selection = NULL,
       info_text = NULL,
       factor = 0  # Default to no adjustment (0%)
+    ),
+    sums = list(
+      ug = 0,
+      oue = 0,
+      og = 0
+    ),
+    totals = list(
+      ug = 0,
+      oue = 0,
+      og = 0
     )
   )
 
@@ -793,11 +803,102 @@ server <- function(input, output, session) {
     }
   })
   
-#----- Section 'slider_groesse' -----
-# Observe the slider input and update the lower and upper limits of the size range
-# based on the selected value. The lower limit is set to the selected value minus
-# 0.1, and the upper limit is set to the selected value plus 0.1. This allows for
-# 
+#----- Section Zusammenfassung und Spannengrenzen -----
+  # This section aggregates all the globals and calculates the total values
+  # for the lower, middle, and upper bounds. The total values are calculated
+  # by summing the individual factors for each section.
+  # The slider input is used to adjust the granularity of the size range.
+  # The download button is used to render the report as an HTML file.
+  
+  # Calculate the total values for the lower, middle, and upper bounds
+  
+  output$sum_ug <- renderText({
+    if (!is.null(globals$groesse$lo)) {
+      sum_value <- sum(
+        globals$groesse$lo,
+        globals$adresse$factor * globals$groesse$lo,
+        globals$baujahr$factor * globals$groesse$lo,
+        globals$renovierung$factor * globals$groesse$lo,
+        globals$sanitaer$factor * globals$groesse$lo,
+        globals$ausstattung$factor * globals$groesse$lo
+      )
+      fv(sum_value, " €/m²")
+    } else {
+      "->"
+    }
+  })
+  
+  output$sum_oue <- renderText({
+    if (!is.null(globals$groesse$mid)) {
+      sum_value <- sum(
+        globals$groesse$mid,
+        globals$adresse$factor * globals$groesse$mid,
+        globals$baujahr$factor * globals$groesse$mid,
+        globals$renovierung$factor * globals$groesse$mid,
+        globals$sanitaer$factor * globals$groesse$mid,
+        globals$ausstattung$factor * globals$groesse$mid
+      )
+      fv(sum_value, " €/m²")
+    } else {
+      "Auswahl fehlt"
+    }
+  })
+  
+  output$sum_og <- renderText({
+    if (!is.null(globals$groesse$hi)) {
+      sum_value <- sum(
+        globals$groesse$hi,
+        globals$adresse$factor * globals$groesse$hi,
+        globals$baujahr$factor * globals$groesse$hi,
+        globals$renovierung$factor * globals$groesse$hi,
+        globals$sanitaer$factor * globals$groesse$hi,
+        globals$ausstattung$factor * globals$groesse$hi
+      )
+      fv(sum_value, " €/m²")
+    } else {
+      "<-"
+    }
+  })
+  
+  # Calculate the total values for the lower, middle, and upper bounds
+  # by multiplying the sums with the slider value, thus resulting in a value not
+  # only for a single square meter but for the appartment as a whole
+  
+  observeEvent(input$slider_groesse, {
+    if (!is.null(globals$groesse$lo)) {
+      globals$totals$ug <- globals$sums$ug * input$slider_groesse
+      globals$totals$oue <- globals$sums$oue * input$slider_groesse
+      globals$totals$og <- globals$sums$og * input$slider_groesse
+    }
+  })
+  
+  output$total_ug <- renderText({
+    if (!is.null(globals$groesse$lo)) {
+      fv(globals$totals$ug, " €")
+    } else {
+      "->"
+    }
+  })
+  
+  output$total_oue <- renderText({
+    if (!is.null(globals$groesse$mid)) {
+      fv(globals$totals$oue, " €")
+    } else {
+      "Auswahl fehlt"
+    }
+  })
+  
+  output$total_og <- renderText({
+    if (!is.null(globals$groesse$hi)) {
+      fv(globals$totals$og, " €")
+    } else {
+      "<-"
+    }
+  })
+  
+  
+  
+  
   
     
   #----- Render Report -----
