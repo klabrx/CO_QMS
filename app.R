@@ -524,9 +524,179 @@ server <- function(input, output, session) {
       )
     }
   })
-    
   
-  #----- Render Report
+#----- Section 'renovierung' -----
+  # The options in 'renovierung need to be updated dynamically based on the 
+  # selected 'baujahr'. If the selected 'baujahr' is before 1990, all options
+  # are available. Otherwise, the option 'Vollmodernisierung seit 2013 (nur
+  # bei Baujahr vor 1990)' is removed. This is done by updating the selectize
+  # input 'renovierung' with the new choices.
+  observeEvent(input$baujahr, {
+    if (!is.null(input$baujahr) && input$baujahr != "") {
+      selected_baujahr <- input$baujahr
+      # Check if the selected Baujahr allows Vollmodernisierung
+      allow_vollmodernisierung <- selected_baujahr < "1990"
+      # Update renovation options based on Baujahr
+      updateSelectizeInput(
+        session,
+        "renovierung",
+        choices = if (allow_vollmodernisierung) {
+          ref_renovation$Option # All options available
+        } else {
+          ref_renovation$Option[ref_renovation$Option !=
+            paste0(
+              "Vollmodernisierung seit 2013 (nur ",
+              "bei Baujahr vor 1990)"
+            )]
+        },
+        selected = input$renovierung # Preserve  selections where possible
+      )
+    }
+  })
+  
+  observeEvent(input$renovierung, {
+    if (is.null(input$renovierung) || length(input$renovierung) == 0) {
+      # No selection: Reset globals and restore all options
+      globals$renovierung$selection <- NULL
+      globals$renovierung$factor <- 0
+      globals$renovierung$info_text <- "-> Angabe fehlt <-"
+      updateSelectizeInput(
+        session,
+        "renovierung",
+        choices = ref_renovation$option,
+        selected = NULL
+      )
+    } else if ("Keine Sanierung/Renovierung bekannt" %in% input$renovierung) {
+      # "Keine Sanierung" selected: Remove all other options
+      globals$renovierung$selection <- "Keine Sanierung/Renovierung bekannt"
+      globals$renovierung$factor <- 0
+      globals$renovierung$info_text <- "Keine Sanierung: 0%"
+      updateSelectizeInput(
+        session,
+        "renovierung",
+        choices = "Keine Sanierung/Renovierung bekannt",
+        selected = "Keine Sanierung/Renovierung bekannt"
+      )
+    } else if ("Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)" %in% input$renovierung) {
+      # "Vollmodernisierung" selected: Remove all other options
+      globals$renovierung$selection <- "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+      globals$renovierung$factor <- 0.11
+      globals$renovierung$info_text <- "Vollmodernisierung: +11%"
+      updateSelectizeInput(
+        session,
+        "renovierung",
+        choices = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
+        selected = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+      )
+    } else {
+      # Valid selections excluding "Keine Sanierung" and "Vollmodernisierung"
+      valid_selections <- input$renovierung[
+        !input$renovierung %in% c(
+          "Keine Sanierung/Renovierung bekannt",
+          "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+        )
+      ]
+      
+      # If "Keine" or "Vollmodernisierung" are unselected, restore all options
+      if (!"Keine Sanierung/Renovierung bekannt" %in% input$renovierung &&
+          !"Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)" %in% input$renovierung) {
+        updateSelectizeInput(
+          session,
+          "renovierung",
+          choices = ref_renovation$option,
+          selected = valid_selections
+        )
+      }
+      
+      # Apply 6% surcharge if 3 or more valid options are selected
+      if (length(valid_selections) >= 3) {
+        globals$renovierung$factor <- 0.06
+        globals$renovierung$info_text <- paste(
+          "Selected options: ", paste(valid_selections, collapse = ", "),
+          "<br>Renovation bonus: +6%"
+        )
+      } else {
+        # Fewer than 3 valid selections
+        globals$renovierung$factor <- 0
+        globals$renovierung$info_text <- "At least 3 valid options are required for +6% bonus."
+      }
+      globals$renovierung$selection <- valid_selections
+    }
+  })
+  
+  
+  
+  
+  # observeEvent(input$renovierung, {
+  #   if (is.null(input$renovierung) || length(input$renovierung) == 0) {
+  #     globals$renovierung$selection <- NULL
+  #     globals$renovierung$factor <- 0
+  #     globals$renovierung$info_text <- ""
+  #   } else if ("Keine Sanierung/Renovierung bekannt" %in% input$renovierung) {
+  #     globals$renovierung$selection <- "Keine Sanierung/Renovierung bekannt"
+  #     globals$renovierung$factor <- 0
+  #     globals$renovierung$info_text <- ""
+  #   } else if ("Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)" %in% input$renovierung) {
+  #     globals$renovierung$selection <- "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+  #     globals$renovierung$factor <- 0.11
+  #     globals$renovierung$info_text <- ""
+  #   } else {
+  #     valid_selections <- input$renovierung[input$renovierung != "Keine Sanierung/Renovierung bekannt"]
+  #     valid_selections <- valid_selections[valid_selections !=
+  #       "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"]
+  #     if (length(valid_selections) >= 3) {
+  #       globals$renovierung$factor <- 0.06
+  #     } else {
+  #       globals$renovierung$factor <- 0
+  #     }
+  #     globals$renovierung$selection <- valid_selections
+  #     globals$renovierung$info_text <- ""
+  #   }
+  # })
+  
+  # Fill the outputs for renovierung accordingly
+  
+  output$renovierung_ug <- renderText({
+    if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$lo)) {
+      adjusted_value <- globals$groesse$lo * globals$renovierung$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "->"
+    }
+  })
+  
+  output$renovierung_oue <- renderText({
+    if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$mid)) {
+      adjusted_value <- globals$groesse$mid * globals$renovierung$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "Auswahl fehlt"
+    }
+  })
+  
+  output$renovierung_og <- renderText({
+    if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$hi)) {
+      adjusted_value <- globals$groesse$hi * globals$renovierung$factor
+      fv(adjusted_value, " €/m²")
+    } else {
+      "<-"
+    }
+  })
+  
+  output$renovierung_info <- renderText({
+    if (is.null(globals$renovierung$selection) || length(globals$renovierung$selection) == 0) {
+      ""
+    } else {
+      HTML(
+        paste(fv(globals$renovierung$factor * 100, " %"))
+      )
+    }
+  })
+  
+  
+  
+  
+  #----- Render Report -----
   # Wait for downloadReport button to be clicked, then use globals to render 
   # Report.Rmd into a pdf file and download it. Globals is passed as a parameter
   # within the YAML front matter of the Rmd file. 
