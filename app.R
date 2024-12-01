@@ -527,20 +527,19 @@ server <- function(input, output, session) {
     
   
   #----- Render Report
-  output$download_report <- downloadHandler(
-    filename = function() {
-      paste("app_globals_report", Sys.Date(), ".pdf", sep = "")
-    },
+  # Wait for downloadReport button to be clicked, then use globals to render 
+  # Report.Rmd into a pdf file and download it. Globals is passed as a parameter
+  # within the YAML front matter of the Rmd file. 
+
+  output$downloadReport <- downloadHandler(
+    filename = "AppGlobalsReport.pdf",
     content = function(file) {
-      # Render the R Markdown file
       rmarkdown::render(
-        input = "Report.Rmd",             # Path to the R Markdown template
-        output_file = file,               # Specify the output file
-        params = list(globals = reactiveValuesToList(globals)),  # Pass globals as params
-        envir = new.env(parent = globalenv())  # Use a clean environment
+        "Report.Rmd",
+        output_file = file,
+        params = list(globals = globals)
       )
-    },
-    contentType = "application/pdf"  # Explicitly set content type to PDF
+    }
   )
   
   
