@@ -9,6 +9,7 @@ library(shinyjs)
 library(markdown)
 library(tinytex)
 library(mapview)
+library(shinyjs)
 
 source("data_sources.R")
 source("functions.R")
@@ -149,19 +150,18 @@ ui <- fluidPage(
     fluidRow(
       class = "framed-row",
       column(
-        width = 4, selectizeInput("renovierung", "Renovierung",
-          choices = ref_renovation$Option,
-          multiple = TRUE
-        ),
-        div(
-          id = "renovierung_hint", "Bitte wählen sie hier die ",
-          "stattgefundenen Renovierungsmaßnahmen (bzw. 'Keine ",
-          "Sanierung/Renovierung bekannt') aus. Eine Vollsanierung ",
-          "führt nur bei Baujahren vor 1990 zu einem Zuschlag (+11%) ",
-          "und kann deshalb bei neueren Gebäuden nicht ausgewählt ",
-          "werden. Für einen Teilmodernisierungszuschlag von 6% sind ",
-          "mindestens drei Verbesserungen erforderlich."
-        )
+        width = 4, checkboxGroupInput("renovierung", "Renovierung",
+          choices = ref_renovation$Option
+        )#,
+        # div(
+        #   id = "renovierung_hint", "Bitte wählen sie hier die ",
+        #   "stattgefundenen Renovierungsmaßnahmen (bzw. 'Keine ",
+        #   "Sanierung/Renovierung bekannt') aus. Eine Vollsanierung ",
+        #   "führt nur bei Baujahren vor 1990 zu einem Zuschlag (+11%) ",
+        #   "und kann deshalb bei neueren Gebäuden nicht ausgewählt ",
+        #   "werden. Für einen Teilmodernisierungszuschlag von 6% sind ",
+        #   "mindestens drei Verbesserungen erforderlich."
+        # )
       ),
       column(width = 2, br(), htmlOutput("renovierung_info")),
       column(width = 2, br(), htmlOutput("renovierung_ug")),
@@ -172,9 +172,8 @@ ui <- fluidPage(
     fluidRow(
       class = "framed-row",
       column(
-        width = 4, selectizeInput("sanitaer", "Sanitärausstattung",
-          choices = ref_sanitaer,
-          multiple = TRUE
+        width = 4, checkboxGroupInput("sanitaer", "Sanitärausstattung",
+          choices = ref_sanitaer
         ),
         div(
           id = "sanitaer_hint", "Bitte machen Sie hier Angaben zur ",
@@ -193,9 +192,8 @@ ui <- fluidPage(
     fluidRow(
       class = "framed-row",
       column(
-        width = 4, selectizeInput("ausstattung", "Ausstattung",
-          choices = names(ref_ausstattung),
-          multiple = TRUE
+        width = 4, checkboxGroupInput("ausstattung", "Ausstattung",
+          choices = names(ref_ausstattung)
         ),
         div(
           id = "ausstattung_hint", "Bitte wählen Sie aus den ",
@@ -550,95 +548,60 @@ server <- function(input, output, session) {
   observeEvent(input$baujahr, {
     if (!is.null(input$baujahr) && input$baujahr != "") {
       selected_baujahr <- input$baujahr
-      # Check if the selected Baujahr allows Vollmodernisierung
-      allow_vollmodernisierung <- selected_baujahr < "1990"
-      # Update renovation options based on Baujahr
-      updateSelectizeInput(
-        session,
-        "renovierung",
-        choices = if (allow_vollmodernisierung) {
-          ref_renovation$Option # All options available
-        } else {
-          ref_renovation$Option[ref_renovation$Option !=
-            paste0(
-              "Vollmodernisierung seit 2013 (nur ",
-              "bei Baujahr vor 1990)"
-            )]
-        },
-        selected = input$renovierung # Preserve  selections where possible
-      )
+      
+      # Check if the selected Baujahr allows "Vollmodernisierung"
+      if (selected_baujahr >= "1990") {
+        disable_options(
+          session = session,
+          input = input,  # Explicitly pass the input object
+          input_id = "renovierung",
+          disable_choices = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+        )
+      } else {
+        enable_options(
+          session = session,
+          input_id = "renovierung",
+          enable_choices = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+        )
+      }
     }
   })
   
+  
+  
   observeEvent(input$renovierung, {
-    if (is.null(input$renovierung) || length(input$renovierung) == 0) {
-      # No selection: Reset globals and restore all options
-      globals$renovierung$selection <- NULL
-      globals$renovierung$factor <- 0
-      globals$renovierung$info_text <- "-> Angabe fehlt <-"
-      updateSelectizeInput(
-        session,
-        "renovierung",
-        choices = ref_renovation$option,
-        selected = NULL
-      )
-    } else if ("Keine Sanierung/Renovierung bekannt" %in% input$renovierung) {
-      # "Keine Sanierung" selected: Remove all other options
-      globals$renovierung$selection <- "Keine Sanierung/Renovierung bekannt"
-      globals$renovierung$factor <- 0
-      globals$renovierung$info_text <- "Keine Sanierung: 0%"
-      updateSelectizeInput(
-        session,
-        "renovierung",
-        choices = "Keine Sanierung/Renovierung bekannt",
-        selected = "Keine Sanierung/Renovierung bekannt"
-      )
-    } else if ("Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)" %in% input$renovierung) {
-      # "Vollmodernisierung" selected: Remove all other options
-      globals$renovierung$selection <- "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
-      globals$renovierung$factor <- 0.11
-      globals$renovierung$info_text <- "Vollmodernisierung: +11%"
-      updateSelectizeInput(
-        session,
-        "renovierung",
-        choices = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
-        selected = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
-      )
+    all_options <- ref_renovation$Option
+    keine_option <- "Keine Sanierung/Renovierung bekannt"
+    vollmod_option <- "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+    selected_options <- input$renovierung
+    
+    if (is.null(selected_options) || length(selected_options) == 0) {
+      # No selection: Reactivate all options
+      enable_options(session, "renovierung", all_options)
+      
+    } else if (keine_option %in% selected_options) {
+      # If "Keine Sanierung" is selected, disable and deselect all other options
+      disable_options(session, input, "renovierung", setdiff(all_options, keine_option))
+      
+    } else if (vollmod_option %in% selected_options) {
+      # If "Vollmodernisierung" is selected, disable and deselect all other options
+      disable_options(session, input, "renovierung", setdiff(all_options, vollmod_option))
+      
     } else {
-      # Valid selections excluding "Keine Sanierung" and "Vollmodernisierung"
-      valid_selections <- input$renovierung[
-        !input$renovierung %in% c(
-          "Keine Sanierung/Renovierung bekannt",
-          "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
-        )
-      ]
+      # Other options are selected
+      disable_options(session, input, "renovierung", c(keine_option, vollmod_option))
       
-      # If "Keine" or "Vollmodernisierung" are unselected, restore all options
-      if (!"Keine Sanierung/Renovierung bekannt" %in% input$renovierung &&
-          !"Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)" %in% input$renovierung) {
-        updateSelectizeInput(
-          session,
-          "renovierung",
-          choices = ref_renovation$option,
-          selected = valid_selections
-        )
+      # If all other options are unselected, reactivate "Keine Sanierung" and "Vollmodernisierung"
+      remaining_options <- setdiff(selected_options, c(keine_option, vollmod_option))
+      if (length(remaining_options) == 0) {
+        enable_options(session, "renovierung", c(keine_option, vollmod_option))
       }
-      
-      # Apply 6% surcharge if 3 or more valid options are selected
-      if (length(valid_selections) >= 3) {
-        globals$renovierung$factor <- 0.06
-        globals$renovierung$info_text <- paste(
-          "Selected options: ", paste(valid_selections, collapse = ", "),
-          "<br>Renovation bonus: +6%"
-        )
-      } else {
-        # Fewer than 3 valid selections
-        globals$renovierung$factor <- 0
-        globals$renovierung$info_text <- "At least 3 valid options are required for +6% bonus."
-      }
-      globals$renovierung$selection <- valid_selections
     }
   })
+  
+  
+  
+  
   
   # Fill the outputs for renovierung accordingly
   

@@ -1,3 +1,36 @@
+disable_options <- function(session, input, input_id, disable_choices) {
+  # Deselect the options
+  current_selections <- isolate(input[[input_id]])  # Use the passed input object
+  updated_selections <- setdiff(current_selections, disable_choices)
+  
+  updateCheckboxGroupInput(
+    session,
+    inputId = input_id,
+    selected = updated_selections
+  )
+  
+  # Disable the options visually
+  js_code <- sprintf(
+    "$('#%s input[value=\"%s\"]').prop('disabled', true).parent().css('color', 'gray');",
+    input_id,
+    paste(disable_choices, collapse = '", "#%s input[value="')
+  )
+  shinyjs::runjs(js_code)
+}
+
+
+
+enable_options <- function(session, input_id, enable_choices) {
+  js_code <- sprintf(
+    "$('#%s input[value=\"%s\"]').prop('disabled', false).parent().css('color', 'black');",
+    input_id,
+    paste(enable_choices, collapse = '", "#%s input[value="')
+  )
+  shinyjs::runjs(js_code)
+}
+
+
+
 # functions.R
 
 #---- function for formatting numerics to 2 decimals, german punctuation
@@ -8,6 +41,24 @@ format_value <- function(value, unit = "", add_plus = FALSE) {
   if (is.na(value)) {
     return("NA")
   }
+  disable_options <- function(session, input_id, disable_choices) {
+    js_code <- sprintf(
+      "$('#%s input[value=\"%s\"]').prop('disabled', true).parent().css('color', 'gray');",
+      input_id,
+      paste(disable_choices, collapse = '", "#%s input[value="')
+    )
+    shinyjs::runjs(js_code)
+  }
+  
+  enable_options <- function(session, input_id, enable_choices) {
+    js_code <- sprintf(
+      "$('#%s input[value=\"%s\"]').prop('disabled', false).parent().css('color', 'black');",
+      input_id,
+      paste(enable_choices, collapse = '", "#%s input[value="')
+    )
+    shinyjs::runjs(js_code)
+  }
+  
   
   # Define the format string
   fmt <- if (add_plus) "%+.2f" else "%.2f"
