@@ -506,7 +506,7 @@ server <- function(input, output, session) {
   # Render all baujahr outputs based on globals$groesse * globals$baujahr$factor
   output$baujahr_ug <- renderText({
     if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$baujahr$factor
+      adjusted_value <- globals$groesse$lo * globals$baujahr$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "->"
@@ -515,7 +515,7 @@ server <- function(input, output, session) {
   
   output$baujahr_oue <- renderText({
     if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$baujahr$factor
+      adjusted_value <- globals$groesse$mid * globals$baujahr$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "Auswahl fehlt"
@@ -524,7 +524,7 @@ server <- function(input, output, session) {
   
   output$baujahr_og <- renderText({
     if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$baujahr$factor
+      adjusted_value <- globals$groesse$hi * globals$baujahr$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "<-"
@@ -644,7 +644,7 @@ server <- function(input, output, session) {
   
   output$renovierung_ug <- renderText({
     if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$renovierung$factor
+      adjusted_value <- globals$groesse$lo * globals$renovierung$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "->"
@@ -653,7 +653,7 @@ server <- function(input, output, session) {
   
   output$renovierung_oue <- renderText({
     if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$renovierung$factor
+      adjusted_value <- globals$groesse$mid * globals$renovierung$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "Auswahl fehlt"
@@ -662,7 +662,7 @@ server <- function(input, output, session) {
   
   output$renovierung_og <- renderText({
     if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$renovierung$factor
+      adjusted_value <- globals$groesse$hi * globals$renovierung$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "<-"
@@ -707,7 +707,7 @@ server <- function(input, output, session) {
   
   output$sanitaer_ug <- renderText({
     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$sanitaer$factor
+      adjusted_value <- globals$groesse$lo * globals$sanitaer$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "->"
@@ -716,7 +716,7 @@ server <- function(input, output, session) {
   
   output$sanitaer_oue <- renderText({
     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$sanitaer$factor
+      adjusted_value <- globals$groesse$mid * globals$sanitaer$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "Auswahl fehlt"
@@ -725,7 +725,7 @@ server <- function(input, output, session) {
   
   output$sanitaer_og <- renderText({
     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$sanitaer$factor
+      adjusted_value <- globals$groesse$hi * globals$sanitaer$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "<-"
@@ -768,7 +768,7 @@ server <- function(input, output, session) {
   
   output$ausstattung_ug <- renderText({
     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$ausstattung$factor
+      adjusted_value <- globals$groesse$lo * globals$ausstattung$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "->"
@@ -777,7 +777,7 @@ server <- function(input, output, session) {
   
   output$ausstattung_oue <- renderText({
     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$ausstattung$factor
+      adjusted_value <- globals$groesse$mid * globals$ausstattung$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "Auswahl fehlt"
@@ -786,7 +786,7 @@ server <- function(input, output, session) {
   
   output$ausstattung_og <- renderText({
     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$ausstattung$factor
+      adjusted_value <- globals$groesse$hi * globals$ausstattung$factor %>% round(2)
       fv(adjusted_value, " €/m²")
     } else {
       "<-"
