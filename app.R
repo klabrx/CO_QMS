@@ -95,13 +95,14 @@ ui <- fluidPage(
     # $ WL_FAKTOR : num [1:12466] -0.07 -0.07 -0.07 -0.07 -0.07 -0.07 -0.07 ...
     fluidRow(
       class = "framed-row",
-      # linke Spalte, Breite 4 von 12, mit selectizeInput für Adressauswahl
-      # und darunter div für Hinweis (wird nach gültiger Eingabe in das Feld
-      # ausgeblendet)
+      
+      # Left column: Selectize input and hint
       column(
-        width = 4,
-        selectizeInput("adresse", "Adresse",
-          choices = c("", ref_adresse$STRASSE_HS),
+        width = 6,
+        selectizeInput(
+          inputId = "adresse",
+          label = "Adresse",
+          choices = c("", ref_adresse$STRASSE_HS), # Add an empty string for the placeholder
           multiple = FALSE
         ),
         div(
@@ -111,18 +112,22 @@ ui <- fluidPage(
           "Sie die Eingabe 'inn 76' direkt zur Innstraße 76."
         )
       ),
+      
+      # Right column: Wohnlage text and leaflet map
       column(
-        width = 8,
+        width = 6,
         fluidRow(
-          column(width = 3, br(), htmlOutput("adresse_info")),
-          column(width = 3, br(), htmlOutput("adresse_ug")),
-          column(width = 3, br(), htmlOutput("adresse_oue")),
-          column(width = 3, br(), htmlOutput("adresse_og"))
-        ),
-        fluidRow(
+          # First sub-row: Wohnlage text
           column(
             width = 12,
-            leafletOutput("adresse_map", height = "200px")
+            htmlOutput("adresse_factor") # Output for Wohnlage and factor
+          )
+        ),
+        fluidRow(
+          # Second sub-row: Leaflet map
+          column(
+            width = 12,
+            leafletOutput("adresse_map", height = "200px") # Map
           )
         )
       )
@@ -130,22 +135,31 @@ ui <- fluidPage(
     #---- Baujahrsauswahl -----
     fluidRow(
       class = "framed-row",
+      
+      # Left column: Dropdown for Baujahr
       column(
-        width = 4, selectInput("baujahr", "Baujahr",
-          c("", ref_baujahr$Baujahr),
-          selectize = TRUE
-        ),
-        div(
-          id = "baujahr_hint", "Bitte geben Sie hier den ",
-          "Baujahresbereich des Gebäudes an, z.B. 'bis 1918' ",
-          "oder '1946 - 1977'."
+        width = 6,
+        selectInput(
+          inputId = "baujahr",
+          label = "Baujahr",
+          choices = c("", ref_baujahr$Baujahr), # Add empty string for placeholder
+          selected = NULL
         )
       ),
-      column(width = 2, br(), htmlOutput("baujahr_info")),
-      column(width = 2, br(), htmlOutput("baujahr_ug")),
-      column(width = 2, br(), htmlOutput("baujahr_oue")),
-      column(width = 2, br(), htmlOutput("baujahr_og"))
+      
+      # Right column: Hint and Baujahr factor output
+      column(
+        width = 6,
+        div(
+          id = "baujahr_hint",
+          "Bitte wählen Sie das Baujahr der Immobilie aus. Der Baujahresfaktor ",
+          "wird automatisch berechnet und angezeigt."
+        ),
+        htmlOutput("baujahr_factor") # Output for Baujahr and factor
+      )
     ),
+    
+    
     #---- Renovierungsauswahl -----
     fluidRow(
       class = "framed-row",
@@ -263,52 +277,45 @@ server <- function(input, output, session) {
   
 #---- Define global variables
   globals <- reactiveValues(
+    # Section: Wohnungsgröße
     groesse = list(
-      selection = NULL,
-      factor = 1,  # Default factor for groesse
-      info_text = NULL,
-      lo = NA_real_,
-      mid = NA_real_,
-      hi = NA_real_
+      selection = NULL,  # Selected size category (e.g., "50-60 m²")
+      factor = 1,        # Default factor for size (100%)
+      info_text = NULL,  # Informational text for display
+      lo = NA_real_,     # Lower range value
+      mid = NA_real_,    # Midpoint value
+      hi = NA_real_      # Upper range value
     ),
+    
+    # Section: Adresse
     adresse = list(
-      selection = NULL,
-      info_text = NULL,
-      factor = 0,  # Default to no adjustment (0%)
-      Lage = NULL,
-      map = NULL
+      selection = NULL,  # Selected address
+      factor = 0,        # Address-specific factor
+      Lage = NULL,       # Wohnlage category (e.g., A, B, C)
+      info_text = "Bitte wählen Sie eine Adresse aus."  # Text for display
     ),
+    
+    # Section: Baujahr
     baujahr = list(
-      selection = NULL,
-      info_text = NULL,
-      factor = 0  # Default to no adjustment (0%)
+      selection = NULL,  # Selected Baujahr
+      factor = 0,        # Baujahr-specific factor
+      info_text = "Bitte wählen Sie ein Baujahr aus."  # Text for display
     ),
+    
+    # Section: Renovierung
     renovierung = list(
-      selection = NULL,
-      info_text = NULL,
-      factor = 0  # Default to no adjustment (0%)
+      selection = NULL,  # Selected renovation measures
+      factor = 0,        # Renovation-specific factor (e.g., +6%)
+      info_text = "Bitte wählen Sie Renovierungsmaßnahmen aus."  # Text for display
     ),
-    sanitaer = list(
-      selection = NULL,
-      info_text = NULL,
-      factor = 0  # Default to no adjustment (0%)
-    ),
-    ausstattung = list(
-      selection = NULL,
-      info_text = NULL,
-      factor = 0  # Default to no adjustment (0%)
-    ),
-    sums = list(
-      ug = 0,
-      oue = 0,
-      og = 0
-    ),
-    totals = list(
-      ug = 0,
-      oue = 0,
-      og = 0
+    
+    # Section: Aggregation
+    sum = list(
+      factor = 0,        # Aggregated factor across all inputs
+      info_text = "Gesamtsumme der Faktoren noch nicht berechnet."  # Summary info text
     )
   )
+  
 
   #---- Hinweistexte bei fehlender Eingabe -----
   # Hints werden ausgeblendet, sobald eine gültige Eingabe erfolgt ist.
@@ -327,7 +334,7 @@ server <- function(input, output, session) {
       if (nrow(selected_groesse) > 0) {
         globals$groesse$selection <- selected_groesse$options
         globals$groesse$factor <- selected_groesse$mid
-        globals$groesse$info_text <- ""
+        globals$groesse$info_text <- "<br>Basiswert:"
         globals$groesse$lo <- selected_groesse$low
         globals$groesse$mid <- selected_groesse$mid
         globals$groesse$hi <- selected_groesse$hi
@@ -378,12 +385,18 @@ server <- function(input, output, session) {
   # Observe input$adresse and update globals accordingly
   observeEvent(input$adresse, {
     if (!is.null(input$adresse) && input$adresse != "") {
+      # Find the selected address details
       selected_adresse <- ref_adresse %>% filter(STRASSE_HS == input$adresse)
       if (nrow(selected_adresse) > 0) {
         globals$adresse$selection <- selected_adresse$STRASSE_HS
         globals$adresse$factor <- selected_adresse$WL_FAKTOR
         globals$adresse$Lage <- selected_adresse$WL_2024
-        
+        globals$adresse$info_text <- paste0(
+          "Die Adresse liegt in Wohnlage <strong>", selected_adresse$WL_2024,
+          "</strong>, Lagenfaktor <strong>",
+          format_value(selected_adresse$WL_FAKTOR * 100, " %", add_plus = TRUE),
+          "</strong><br>"
+        )     
         # Filter data for the specified street
         selected_street <- sub(" [0-9]+.*$", "", globals$adresse$selection)
         filtered_data <- adr2024 %>% filter(STRASSE == selected_street)
@@ -435,47 +448,10 @@ server <- function(input, output, session) {
     }
   })
   
-  # Render all adresse outputs based on globals$groesse * globals$adresse$factor
-  output$adresse_ug <- renderText({
-    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$adresse$factor
-      fv(adjusted_value, " €/m²")
-    } else {
-      "->"
-    }
-  })
-  
-  output$adresse_oue <- renderText({
-    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$adresse$factor
-      fv(adjusted_value, " €/m²")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
-  
-  output$adresse_og <- renderText({
-    if (!is.null(globals$adresse$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$adresse$factor
-      fv(adjusted_value, " €/m²")
-    } else {
-      "<-"
-    }
-  })
-  
-  output$adresse_info <- renderUI({
-    if (is.null(globals$adresse$selection) || globals$adresse$selection == "") {
-      ""
-    } else {
-      HTML(
-        paste("Lage ", globals$adresse$Lage,
-              "<br>",
-              "(", fv(globals$adresse$factor * 100, " %"), ")")
-      )
-    }
+  output$adresse_factor <- renderText({
+    globals$adresse$info_text
   })
 
-  
   # Render the Leaflet map using the globalized map
   output$adresse_map <- renderLeaflet({
     req(globals$adresse$map) # Ensure the map exists
@@ -486,58 +462,32 @@ server <- function(input, output, session) {
   # 'baujahr is handled exactly the same way as 'adresse':
   # Observe input$baujahr and update globals accordingly
   # Use -> Auswahl fehlt <- as default value for missing selections
-   
   observeEvent(input$baujahr, {
     if (!is.null(input$baujahr) && input$baujahr != "") {
       selected_baujahr <- ref_baujahr %>% filter(Baujahr == input$baujahr)
       if (nrow(selected_baujahr) > 0) {
         globals$baujahr$selection <- selected_baujahr$Baujahr
         globals$baujahr$factor <- selected_baujahr$Faktor
-        globals$baujahr$info_text <- ""
+        globals$baujahr$info_text <- paste0(
+          "Baujahr: <strong>", selected_baujahr$Baujahr, 
+          "</strong>, Baujahresfaktor <strong>",
+          format_value(selected_baujahr$Faktor * 100, " %", add_plus = TRUE),
+          "</strong>"
+        )
       }
     } else {
+      # Reset globals if no selection is made
       globals$baujahr$selection <- NULL
       globals$baujahr$factor <- 0
+      globals$baujahr$info_text <- ""
     }
   })
   
-  # Render all baujahr outputs based on globals$groesse * globals$baujahr$factor
-  output$baujahr_ug <- renderText({
-    if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$baujahr$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "->"
-    }
+  output$baujahr_factor <- renderText({
+    globals$baujahr$info_text
   })
   
-  output$baujahr_oue <- renderText({
-    if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$baujahr$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
   
-  output$baujahr_og <- renderText({
-    if (!is.null(globals$baujahr$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$baujahr$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "<-"
-    }
-  })
-  
-  output$baujahr_info <- renderText({
-    if (is.null(globals$baujahr$selection) || globals$baujahr$selection == "") {
-      ""
-    } else {
-      HTML(
-        paste(fv(globals$baujahr$factor * 100, " %"))
-      )
-    }
-  })
   
 #----- Section 'renovierung' -----
   # The options in 'renovierung need to be updated dynamically based on the 
