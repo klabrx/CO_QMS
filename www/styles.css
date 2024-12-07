@@ -70,4 +70,39 @@ body {
   box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.1);
 }
 
+.framed-row-incomplete {
+  background-color: #f8d7da; /* Light red */
+  border: 1px solid #f5c6cb; /* Red border */
+  border-radius: 4px;
+}
+
+.framed-row-complete {
+  background-color: #d4edda; /* Light green */
+  border: 1px solid #c3e6cb; /* Green border */
+  border-radius: 4px;
+}
+
+
+
+/* General Button Styling */
+.btn-primary {
+  background-color: #4CAF50; /* Subtle green */
+  border-color: #4CAF50; /* Match the background */
+  color: white; /* Text color */
+}
+
+.btn-primary:hover {
+  background-color: #45A049; /* Slightly darker green on hover */
+}
+
+.btn-secondary {
+  background-color: #2196F3; /* Subtle blue */
+  border-color: #2196F3;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #1E88E5; /* Slightly darker blue on hover */
+}
+
 

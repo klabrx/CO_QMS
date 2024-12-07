@@ -44,6 +44,7 @@ ui <- fluidPage(
     # options  : chr [1:47] "25 bis unter 26 m²" "26 bis unter 27 m²" ...
     fluidRow(
       class = "framed-row",
+      id = "groesse_row",
       column(
         width = 4,
         selectInput("groesse", "Wohnungsgröße (m²)",
@@ -95,7 +96,7 @@ ui <- fluidPage(
     # $ WL_FAKTOR : num [1:12466] -0.07 -0.07 -0.07 -0.07 -0.07 -0.07 -0.07 ...
     fluidRow(
       class = "framed-row",
-      
+      id = "adresse_row",
       # Left column: Selectize input and hint
       column(
         width = 6,
@@ -135,7 +136,7 @@ ui <- fluidPage(
     #---- Baujahrsauswahl -----
     fluidRow(
       class = "framed-row",
-      
+      id = "baujahr_row",
       # Left column: Dropdown for Baujahr
       column(
         width = 6,
@@ -163,28 +164,50 @@ ui <- fluidPage(
     #---- Renovierungsauswahl -----
     fluidRow(
       class = "framed-row",
+      id = "renovierung_row",
       column(
-        width = 4, checkboxGroupInput("renovierung", "Renovierung",
-          choices = ref_renovation$Option
-        )#,
-        # div(
-        #   id = "renovierung_hint", "Bitte wählen sie hier die ",
-        #   "stattgefundenen Renovierungsmaßnahmen (bzw. 'Keine ",
-        #   "Sanierung/Renovierung bekannt') aus. Eine Vollsanierung ",
-        #   "führt nur bei Baujahren vor 1990 zu einem Zuschlag (+11%) ",
-        #   "und kann deshalb bei neueren Gebäuden nicht ausgewählt ",
-        #   "werden. Für einen Teilmodernisierungszuschlag von 6% sind ",
-        #   "mindestens drei Verbesserungen erforderlich."
-        # )
+        width = 6,
+        # Step 1: Renovation toggle button
+        actionButton(
+          inputId = "renovierung_toggle",
+          label = "Keine Renovierung bekannt", # Default state
+          class = "btn-primary"
+        ),
+        br(), br(),
+        # Step 2: Voll/Teil buttons
+        actionButton(
+          inputId = "renovierung_type",
+          label = "Vollrenovierung | Teilrenovierungen",
+          class = "btn-secondary"
+        ),
+        br(), br(),
+        # Step 3: Detailed checkboxes
+        checkboxGroupInput(
+          inputId = "renovierung_measures",
+          label = "Welche Maßnahmen wurden durchgeführt?",
+          choices = setdiff(
+            ref_renovation$Option,
+            c(
+              "Keine Sanierung/Renovierung bekannt",
+              "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+            )
+          )
+        )
       ),
-      column(width = 2, br(), htmlOutput("renovierung_info")),
-      column(width = 2, br(), htmlOutput("renovierung_ug")),
-      column(width = 2, br(), htmlOutput("renovierung_oue")),
-      column(width = 2, br(), htmlOutput("renovierung_og"))
+      column(
+        width = 6,
+        # Display renovation factor as output
+        htmlOutput("renovierung_factor"),
+        # Optionally, include a debug output for now
+        htmlOutput("debug_renovierung_ui")
+      )
     ),
+    
+    
     #---- Sanitärausstattungsauswahl -----
     fluidRow(
       class = "framed-row",
+      id = "sanitaer_row",
       column(
         width = 4, checkboxGroupInput("sanitaer", "Sanitärausstattung",
           choices = ref_sanitaer
@@ -205,6 +228,7 @@ ui <- fluidPage(
     #---- Ausstattungsauswahl -----
     fluidRow(
       class = "framed-row",
+      id = "ausstattung_row",
       column(
         width = 4, checkboxGroupInput("ausstattung", "Ausstattung",
           choices = names(ref_ausstattung)
@@ -224,6 +248,7 @@ ui <- fluidPage(
     #---- Zusammenfassung und Spannengrenzen -----
     fluidRow(
       class = "framed-row",
+      id = "summary_row",
       column(
         width = 6,
         strong("Zusammenfassung und Spannengrenzen:"),
@@ -275,7 +300,7 @@ server <- function(input, output, session) {
 #---- aliases for functions
   fv <- format_value
   
-#---- Define global variables
+#----- Define global variables ------
   globals <- reactiveValues(
     # Section: Wohnungsgröße
     groesse = list(
@@ -304,8 +329,8 @@ server <- function(input, output, session) {
     
     # Section: Renovierung
     renovierung = list(
-      selection = NULL,  # Selected renovation measures
-      factor = 0,        # Renovation-specific factor (e.g., +6%)
+      selection = NULL,  # Selected renovierung measures
+      factor = 0,        # Renovierung-specific factor (e.g., +6%)
       info_text = "Bitte wählen Sie Renovierungsmaßnahmen aus."  # Text for display
     ),
     
@@ -319,12 +344,12 @@ server <- function(input, output, session) {
 
   #---- Hinweistexte bei fehlender Eingabe -----
   # Hints werden ausgeblendet, sobald eine gültige Eingabe erfolgt ist.
-  showHintIfEmpty(input, "adresse", "adresse_hint", session)
-  showHintIfEmpty(input, "groesse", "groesse_hint", session)
-  showHintIfEmpty(input, "baujahr", "baujahr_hint", session)
-  showHintIfEmpty(input, "renovierung", "renovierung_hint", session)
-  showHintIfEmpty(input, "sanitaer", "sanitaer_hint", session)
-  showHintIfEmpty(input, "ausstattung", "ausstattung_hint", session)
+  showHintIfEmpty(input, "adresse", "adresse_hint", "adresse_row", session)
+  showHintIfEmpty(input, "groesse", "groesse_hint", "groesse_row", session)
+  showHintIfEmpty(input, "baujahr", "baujahr_hint", "baujahr_row", session)
+  showHintIfEmpty(input, "renovierung_measures", "renovierung_hint", "renovierung_row", session)
+  showHintIfEmpty(input, "sanitaer", "sanitaer_hint", "sanitaer_row",  session)
+  showHintIfEmpty(input, "ausstattung", "ausstattung_hint", "ausstattung_row", session)
   
 #----- Section 'groesse' -----
   # Observe input$groesse and update globals accordingly
@@ -490,353 +515,254 @@ server <- function(input, output, session) {
   
   
 #----- Section 'renovierung' -----
-  # The options in 'renovierung need to be updated dynamically based on the 
-  # selected 'baujahr'. If the selected 'baujahr' is before 1990, all options
-  # are available. Otherwise, the option 'Vollmodernisierung seit 2013 (nur
-  # bei Baujahr vor 1990)' is removed. This is done by updating the selectize
-  # input 'renovierung' with the new choices.
-  observeEvent(input$baujahr, {
-    if (!is.null(input$baujahr) && input$baujahr != "") {
-      selected_baujahr <- input$baujahr
-      
-      # Check if the selected Baujahr allows "Vollmodernisierung"
-      if (selected_baujahr >= "1990") {
-        disable_options(
-          session = session,
-          input = input,  # Explicitly pass the input object
-          input_id = "renovierung",
-          disable_choices = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
-        )
-      } else {
-        enable_options(
-          session = session,
-          input_id = "renovierung",
-          enable_choices = "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
-        )
-      }
-    }
-  })
+  # Observe 'baujahr' and disable 'Vollmod.." if Baujahr >= "1990"
+
   
-  
-  
-  observeEvent(input$renovierung, {
-    all_options <- ref_renovation$Option
-    keine_option <- "Keine Sanierung/Renovierung bekannt"
-    vollmod_option <- "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
-    selected_options <- input$renovierung
-    
-    if (is.null(selected_options) || length(selected_options) == 0) {
-      # No selection: Reactivate all options
-      enable_options(session, "renovierung", all_options)
-      
-    } else if (keine_option %in% selected_options) {
-      # If "Keine Sanierung" is selected, disable and deselect all other options
-      disable_options(session, input, "renovierung", setdiff(all_options, keine_option))
-      
-    } else if (vollmod_option %in% selected_options) {
-      # If "Vollmodernisierung" is selected, disable and deselect all other options
-      disable_options(session, input, "renovierung", setdiff(all_options, vollmod_option))
-      
-    } else {
-      # Other options are selected
-      disable_options(session, input, "renovierung", c(keine_option, vollmod_option))
-      
-      # If all other options are unselected, reactivate "Keine Sanierung" and "Vollmodernisierung"
-      remaining_options <- setdiff(selected_options, c(keine_option, vollmod_option))
-      if (length(remaining_options) == 0) {
-        enable_options(session, "renovierung", c(keine_option, vollmod_option))
-      }
-    }
-  })
-  
-  
-  
-  
-  
-  # Fill the outputs for renovierung accordingly
-  
-  output$renovierung_ug <- renderText({
-    if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$renovierung$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "->"
-    }
-  })
-  
-  output$renovierung_oue <- renderText({
-    if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$renovierung$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
-  
-  output$renovierung_og <- renderText({
-    if (!is.null(globals$renovierung$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$renovierung$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "<-"
-    }
-  })
-  
-  output$renovierung_info <- renderText({
-    if (is.null(globals$renovierung$selection) || length(globals$renovierung$selection) == 0) {
-      ""
-    } else {
-      HTML(
-        paste(fv(globals$renovierung$factor * 100, " %"))
-      )
-    }
-  })
-  
-#----- Section 'sanitaer' -----
-  # Observe input$sanitaer and update globals accordingly
-   
-  observeEvent(input$sanitaer, {
-    if (is.null(input$sanitaer) || length(input$sanitaer) == 0) {
-      globals$sanitaer$selection <- NULL
-      globals$sanitaer$factor <- 0
-      globals$sanitaer$info_text <- "-> Angabe fehlt <-"
-    } else {
-      valid_selections <- input$sanitaer
-      if (length(valid_selections) >= 3) {
-        globals$sanitaer$factor <- 0.06
-        globals$sanitaer$info_text <- paste(
-          "Selected options: ", paste(valid_selections, collapse = ", "),
-          "<br>Sanitary bonus: +6%"
-        )
-      } else {
-        globals$sanitaer$factor <- 0
-        globals$sanitaer$info_text <- "At least 3 valid options are required for +6% bonus."
-      }
-      globals$sanitaer$selection <- valid_selections
-    }
-  })
-  
-  # Fill the outputs for sanitaer accordingly
-  
-  output$sanitaer_ug <- renderText({
-    if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$sanitaer$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "->"
-    }
-  })
-  
-  output$sanitaer_oue <- renderText({
-    if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$sanitaer$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
-  
-  output$sanitaer_og <- renderText({
-    if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$sanitaer$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "<-"
-    }
-  })
-  
-  output$sanitaer_info <- renderText({
-    if (is.null(globals$sanitaer$selection) || length(globals$sanitaer$selection) == 0) {
-      ""
-    } else {
-      HTML(
-        paste(fv(globals$sanitaer$factor * 100, " %"))
-      )
-    }
-  })
-  
-#----- Section 'ausstattung' -----
-  # Observe input$ausstattung and update globals accordingly
-  # Use -> Angabe fehlt <- as default value for missing selections
-  # Every selection carries its own factor, which is added to the global factor
-  
-  observeEvent(input$ausstattung, {
-    if (is.null(input$ausstattung) || length(input$ausstattung) == 0) {
-      globals$ausstattung$selection <- NULL
-      globals$ausstattung$factor <- 0
-      globals$ausstattung$info_text <- "-> Angabe fehlt <-"
-    } else {
-      valid_selections <- input$ausstattung
-      factor <- sum(unlist(ref_ausstattung[valid_selections]))
-      globals$ausstattung$factor <- factor
-      globals$ausstattung$selection <- valid_selections
-      globals$ausstattung$info_text <- paste(
-        "Selected options: ", paste(valid_selections, collapse = ", "),
-        "<br>Sum of factors: ", factor
-      )
-    }
-  })
-  
-  # Fill the outputs for ausstattung accordingly
-  
-  output$ausstattung_ug <- renderText({
-    if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$lo)) {
-      adjusted_value <- globals$groesse$lo * globals$ausstattung$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "->"
-    }
-  })
-  
-  output$ausstattung_oue <- renderText({
-    if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$mid)) {
-      adjusted_value <- globals$groesse$mid * globals$ausstattung$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
-  
-  output$ausstattung_og <- renderText({
-    if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$hi)) {
-      adjusted_value <- globals$groesse$hi * globals$ausstattung$factor %>% round(2)
-      fv(adjusted_value, " €/m²")
-    } else {
-      "<-"
-    }
-  })
-  
-  output$ausstattung_info <- renderText({
-    if (is.null(globals$ausstattung$selection) || length(globals$ausstattung$selection) == 0) {
-      ""
-    } else {
-      HTML(
-        globals$ausstattung$info_text
-      )
-    }
-  })
-  
-#----- Section Zusammenfassung und Spannengrenzen -----
-  # This section aggregates all the globals and calculates the total values
-  # for the lower, middle, and upper bounds. The total values are calculated
-  # by summing the individual factors for each section.
-  # The slider input is used to adjust the granularity of the size range.
-  # The download button is used to render the report as an HTML file.
-  
-  # Calculate the total values for the lower, middle, and upper bounds
-  
-  output$sum_ug <- renderText({
-    if (!is.null(globals$groesse$lo)) {
-      sum_value <- sum(
-        globals$groesse$lo,
-        globals$adresse$factor * globals$groesse$lo,
-        globals$baujahr$factor * globals$groesse$lo,
-        globals$renovierung$factor * globals$groesse$lo,
-        globals$sanitaer$factor * globals$groesse$lo,
-        globals$ausstattung$factor * globals$groesse$lo
-      )
-      fv(sum_value, " €/m²")
-    } else {
-      "->"
-    }
-  })
-  
-  output$sum_oue <- renderText({
-    if (!is.null(globals$groesse$mid)) {
-      sum_value <- sum(
-        globals$groesse$mid,
-        globals$adresse$factor * globals$groesse$mid,
-        globals$baujahr$factor * globals$groesse$mid,
-        globals$renovierung$factor * globals$groesse$mid,
-        globals$sanitaer$factor * globals$groesse$mid,
-        globals$ausstattung$factor * globals$groesse$mid
-      )
-      fv(sum_value, " €/m²")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
-  
-  output$sum_og <- renderText({
-    if (!is.null(globals$groesse$hi)) {
-      sum_value <- sum(
-        globals$groesse$hi,
-        globals$adresse$factor * globals$groesse$hi,
-        globals$baujahr$factor * globals$groesse$hi,
-        globals$renovierung$factor * globals$groesse$hi,
-        globals$sanitaer$factor * globals$groesse$hi,
-        globals$ausstattung$factor * globals$groesse$hi
-      )
-      fv(sum_value, " €/m²")
-    } else {
-      "<-"
-    }
-  })
-  
-  # Calculate the total values for the lower, middle, and upper bounds
-  # by multiplying the sums with the slider value, thus resulting in a value not
-  # only for a single square meter but for the appartment as a whole
-  
-  observeEvent(input$slider_groesse, {
-    if (!is.null(globals$groesse$lo)) {
-      globals$totals$ug <- globals$sums$ug * input$slider_groesse
-      globals$totals$oue <- globals$sums$oue * input$slider_groesse
-      globals$totals$og <- globals$sums$og * input$slider_groesse
-    }
-  })
-  
-  output$total_ug <- renderText({
-    if (!is.null(globals$groesse$lo)) {
-      fv(globals$totals$ug, " €")
-    } else {
-      "->"
-    }
-  })
-  
-  output$total_oue <- renderText({
-    if (!is.null(globals$groesse$mid)) {
-      fv(globals$totals$oue, " €")
-    } else {
-      "Auswahl fehlt"
-    }
-  })
-  
-  output$total_og <- renderText({
-    if (!is.null(globals$groesse$hi)) {
-      fv(globals$totals$og, " €")
-    } else {
-      "<-"
-    }
-  })
-  
-  
-  
-  
-  
-    
-  #----- Render Report -----
-  # Render the report as a downloadable HTML file, using the globals to pass the
-  # necessary information to the report. The report is rendered using the
-  # rmarkdown::render function, which takes the input file (report.Rmd) and
-  # the output file (report.html) as arguments. The globals are passed to the
-  # report using the params argument, which is a list of named parameters.
-  # The report will be rendered when the download button is clicked.
-  # 
-  output$downloadReport <- downloadHandler(
-    filename = function() {
-      "report.html"
-    },
-    content = function(file) {
-      rmarkdown::render(
-        input = "report.Rmd",
-        output_file = file,
-        params = list(globals = reactiveValuesToList(globals)),  # Pass globals
-        envir = new.env(parent = globalenv())  # Use an isolated environment
-      )
-    }
-  )
-  
-  
+# #----- Section 'sanitaer' -----
+#   # Observe input$sanitaer and update globals accordingly
+#    
+#   observeEvent(input$sanitaer, {
+#     if (is.null(input$sanitaer) || length(input$sanitaer) == 0) {
+#       globals$sanitaer$selection <- NULL
+#       globals$sanitaer$factor <- 0
+#       globals$sanitaer$info_text <- "-> Angabe fehlt <-"
+#     } else {
+#       valid_selections <- input$sanitaer
+#       if (length(valid_selections) >= 3) {
+#         globals$sanitaer$factor <- 0.06
+#         globals$sanitaer$info_text <- paste(
+#           "Selected options: ", paste(valid_selections, collapse = ", "),
+#           "<br>Sanitary bonus: +6%"
+#         )
+#       } else {
+#         globals$sanitaer$factor <- 0
+#         globals$sanitaer$info_text <- "At least 3 valid options are required for +6% bonus."
+#       }
+#       globals$sanitaer$selection <- valid_selections
+#     }
+#   })
+#   
+#   # Fill the outputs for sanitaer accordingly
+#   
+#   output$sanitaer_ug <- renderText({
+#     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$lo)) {
+#       adjusted_value <- globals$groesse$lo * globals$sanitaer$factor %>% round(2)
+#       fv(adjusted_value, " €/m²")
+#     } else {
+#       "->"
+#     }
+#   })
+#   
+#   output$sanitaer_oue <- renderText({
+#     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$mid)) {
+#       adjusted_value <- globals$groesse$mid * globals$sanitaer$factor %>% round(2)
+#       fv(adjusted_value, " €/m²")
+#     } else {
+#       "Auswahl fehlt"
+#     }
+#   })
+#   
+#   output$sanitaer_og <- renderText({
+#     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$hi)) {
+#       adjusted_value <- globals$groesse$hi * globals$sanitaer$factor %>% round(2)
+#       fv(adjusted_value, " €/m²")
+#     } else {
+#       "<-"
+#     }
+#   })
+#   
+#   output$sanitaer_info <- renderText({
+#     if (is.null(globals$sanitaer$selection) || length(globals$sanitaer$selection) == 0) {
+#       ""
+#     } else {
+#       HTML(
+#         paste(fv(globals$sanitaer$factor * 100, " %"))
+#       )
+#     }
+#   })
+#   
+# #----- Section 'ausstattung' -----
+#   # Observe input$ausstattung and update globals accordingly
+#   # Use -> Angabe fehlt <- as default value for missing selections
+#   # Every selection carries its own factor, which is added to the global factor
+#   
+#   observeEvent(input$ausstattung, {
+#     if (is.null(input$ausstattung) || length(input$ausstattung) == 0) {
+#       globals$ausstattung$selection <- NULL
+#       globals$ausstattung$factor <- 0
+#       globals$ausstattung$info_text <- "-> Angabe fehlt <-"
+#     } else {
+#       valid_selections <- input$ausstattung
+#       factor <- sum(unlist(ref_ausstattung[valid_selections]))
+#       globals$ausstattung$factor <- factor
+#       globals$ausstattung$selection <- valid_selections
+#       globals$ausstattung$info_text <- paste(
+#         "Selected options: ", paste(valid_selections, collapse = ", "),
+#         "<br>Sum of factors: ", factor
+#       )
+#     }
+#   })
+#   
+#   # Fill the outputs for ausstattung accordingly
+#   
+#   output$ausstattung_ug <- renderText({
+#     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$lo)) {
+#       adjusted_value <- globals$groesse$lo * globals$ausstattung$factor %>% round(2)
+#       fv(adjusted_value, " €/m²")
+#     } else {
+#       "->"
+#     }
+#   })
+#   
+#   output$ausstattung_oue <- renderText({
+#     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$mid)) {
+#       adjusted_value <- globals$groesse$mid * globals$ausstattung$factor %>% round(2)
+#       fv(adjusted_value, " €/m²")
+#     } else {
+#       "Auswahl fehlt"
+#     }
+#   })
+#   
+#   output$ausstattung_og <- renderText({
+#     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$hi)) {
+#       adjusted_value <- globals$groesse$hi * globals$ausstattung$factor %>% round(2)
+#       fv(adjusted_value, " €/m²")
+#     } else {
+#       "<-"
+#     }
+#   })
+#   
+#   output$ausstattung_info <- renderText({
+#     if (is.null(globals$ausstattung$selection) || length(globals$ausstattung$selection) == 0) {
+#       ""
+#     } else {
+#       HTML(
+#         globals$ausstattung$info_text
+#       )
+#     }
+#   })
+#   
+# #----- Section Zusammenfassung und Spannengrenzen -----
+#   # This section aggregates all the globals and calculates the total values
+#   # for the lower, middle, and upper bounds. The total values are calculated
+#   # by summing the individual factors for each section.
+#   # The slider input is used to adjust the granularity of the size range.
+#   # The download button is used to render the report as an HTML file.
+#   
+#   # Calculate the total values for the lower, middle, and upper bounds
+#   
+#   output$sum_ug <- renderText({
+#     if (!is.null(globals$groesse$lo)) {
+#       sum_value <- sum(
+#         globals$groesse$lo,
+#         globals$adresse$factor * globals$groesse$lo,
+#         globals$baujahr$factor * globals$groesse$lo,
+#         globals$renovierung$factor * globals$groesse$lo,
+#         globals$sanitaer$factor * globals$groesse$lo,
+#         globals$ausstattung$factor * globals$groesse$lo
+#       )
+#       fv(sum_value, " €/m²")
+#     } else {
+#       "->"
+#     }
+#   })
+#   
+#   output$sum_oue <- renderText({
+#     if (!is.null(globals$groesse$mid)) {
+#       sum_value <- sum(
+#         globals$groesse$mid,
+#         globals$adresse$factor * globals$groesse$mid,
+#         globals$baujahr$factor * globals$groesse$mid,
+#         globals$renovierung$factor * globals$groesse$mid,
+#         globals$sanitaer$factor * globals$groesse$mid,
+#         globals$ausstattung$factor * globals$groesse$mid
+#       )
+#       fv(sum_value, " €/m²")
+#     } else {
+#       "Auswahl fehlt"
+#     }
+#   })
+#   
+#   output$sum_og <- renderText({
+#     if (!is.null(globals$groesse$hi)) {
+#       sum_value <- sum(
+#         globals$groesse$hi,
+#         globals$adresse$factor * globals$groesse$hi,
+#         globals$baujahr$factor * globals$groesse$hi,
+#         globals$renovierung$factor * globals$groesse$hi,
+#         globals$sanitaer$factor * globals$groesse$hi,
+#         globals$ausstattung$factor * globals$groesse$hi
+#       )
+#       fv(sum_value, " €/m²")
+#     } else {
+#       "<-"
+#     }
+#   })
+#   
+#   # Calculate the total values for the lower, middle, and upper bounds
+#   # by multiplying the sums with the slider value, thus resulting in a value not
+#   # only for a single square meter but for the appartment as a whole
+#   
+#   observeEvent(input$slider_groesse, {
+#     if (!is.null(globals$groesse$lo)) {
+#       globals$totals$ug <- globals$sums$ug * input$slider_groesse
+#       globals$totals$oue <- globals$sums$oue * input$slider_groesse
+#       globals$totals$og <- globals$sums$og * input$slider_groesse
+#     }
+#   })
+#   
+#   output$total_ug <- renderText({
+#     if (!is.null(globals$groesse$lo)) {
+#       fv(globals$totals$ug, " €")
+#     } else {
+#       "->"
+#     }
+#   })
+#   
+#   output$total_oue <- renderText({
+#     if (!is.null(globals$groesse$mid)) {
+#       fv(globals$totals$oue, " €")
+#     } else {
+#       "Auswahl fehlt"
+#     }
+#   })
+#   
+#   output$total_og <- renderText({
+#     if (!is.null(globals$groesse$hi)) {
+#       fv(globals$totals$og, " €")
+#     } else {
+#       "<-"
+#     }
+#   })
+#   
+#   
+#   
+#   
+#   
+#     
+#   #----- Render Report -----
+#   # Render the report as a downloadable HTML file, using the globals to pass the
+#   # necessary information to the report. The report is rendered using the
+#   # rmarkdown::render function, which takes the input file (report.Rmd) and
+#   # the output file (report.html) as arguments. The globals are passed to the
+#   # report using the params argument, which is a list of named parameters.
+#   # The report will be rendered when the download button is clicked.
+#   # 
+#   output$downloadReport <- downloadHandler(
+#     filename = function() {
+#       "report.html"
+#     },
+#     content = function(file) {
+#       rmarkdown::render(
+#         input = "report.Rmd",
+#         output_file = file,
+#         params = list(globals = reactiveValuesToList(globals)),  # Pass globals
+#         envir = new.env(parent = globalenv())  # Use an isolated environment
+#       )
+#     }
+#   )
+#   
+#   
 
 }
 shinyApp(ui = ui, server = server)
