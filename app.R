@@ -172,11 +172,12 @@ ui <- fluidPage(
           inputId = "renovierung_main",
           label = "Renovierungsart",
           choices = c(
+            "",
             "Keine Sanierung/Renovierung bekannt",
             "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
             "Teilrenovierung"
           ),
-          selected = "Keine Sanierung/Renovierung bekannt"
+          selected = ""
         ),
         # Step 2: Checkboxes for Teilrenovierung (hidden by default)
         conditionalPanel(
@@ -203,24 +204,44 @@ ui <- fluidPage(
     #---- Sanitärausstattungsauswahl -----
     fluidRow(
       class = "framed-row",
-      id = "sanitaer_row",
+      id = "sanitaer_row", # Unique ID for background color handling
       column(
-        width = 4, checkboxGroupInput("sanitaer", "Sanitärausstattung",
-          choices = ref_sanitaer
+        width = 6,
+        # Primary dropdown for sanitär options
+        selectInput(
+          inputId = "sanitaer_main",
+          label = "Sanitärausstattung",
+          choices = c("",
+            "Keine besondere Sanitärausstattung",
+            "Verbesserte Sanitärausstattung"
+          ),
+          selected = ""
         ),
-        div(
-          id = "sanitaer_hint", "Bitte machen Sie hier Angaben zur ",
-          "Sanitärausstattung (bzw. 'Keine besondere ",
-          "Sanitärausstattung'). Ein Zuschlag für gehobene ",
-          "Sanitärausstattung (6%) erfordert mindestens drei ",
-          "Zusatzmerkmale."
+        # Secondary checkbox group for detailed options (hidden by default)
+        conditionalPanel(
+          condition = "input.sanitaer_main == 'Verbesserte Sanitärausstattung'",
+          checkboxGroupInput(
+            inputId = "sanitaer_details",
+            label = "Welche Verbesserungen sind vorhanden?",
+            choices = ref_sanitaer[-1]
+          )
         )
       ),
-      column(width = 2, br(), htmlOutput("sanitaer_info")),
-      column(width = 2, br(), htmlOutput("sanitaer_ug")),
-      column(width = 2, br(), htmlOutput("sanitaer_oue")),
-      column(width = 2, br(), htmlOutput("sanitaer_og"))
+      column(
+        width = 6,
+        # Hint text in the right column
+        div(
+          id = "sanitaer_hint",
+          "Bitte wählen Sie die Sanitärausstattung der Immobilie aus. ",
+          "Eine verbesserte Sanitärausstattung führt bei mindestens ",
+          "drei Maßnahmen zu einem Zuschlag von +6%. Ohne besondere ",
+          "Ausstattung bleibt der Faktor bei 0%."
+        ),
+        # Output for sanitär factor
+        htmlOutput("sanitaer_factor")
+      )
     ),
+    
     #---- Ausstattungsauswahl -----
     fluidRow(
       class = "framed-row",
@@ -293,6 +314,14 @@ ui <- fluidPage(
   )
 )
 server <- function(input, output, session) {
+  updateSelectInput(
+    session,
+    "renovierung_main",
+    selected = ""
+  )
+  
+  
+  
 #---- aliases for functions
   fv <- format_value
   
@@ -344,7 +373,7 @@ server <- function(input, output, session) {
   showHintIfEmpty(input, "groesse", "groesse_hint", "groesse_row", session)
   showHintIfEmpty(input, "baujahr", "baujahr_hint", "baujahr_row", session)
   showHintIfEmpty(input, "renovierung_main", "renovierung_hint", "renovierung_row", session)
-  showHintIfEmpty(input, "sanitaer", "sanitaer_hint", "sanitaer_row",  session)
+  showHintIfEmpty(input, "sanitaer_main", "sanitaer_hint", "sanitaer_row",  session)
   showHintIfEmpty(input, "ausstattung", "ausstattung_hint", "ausstattung_row", session)
   
 #----- Section 'groesse' -----
@@ -507,14 +536,14 @@ server <- function(input, output, session) {
   observeEvent(input$baujahr, {
     if (input$baujahr >= "1990") {
       if (input$renovierung_main == "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)") {
-        # If "Vollmodernisierung" is selected, reset to "Keine Renovierung bekannt"
+        # If "Vollmodernisierung" is selected, reset to no selection
         updateSelectInput(
           session,
           "renovierung_main",
-          selected = "Keine Sanierung/Renovierung bekannt"
+          selected = "" # Reset to empty, not "Keine Sanierung/Renovierung bekannt"
         )
         globals$renovierung$factor <- 0
-        globals$renovierung$info_text <- "Keine Renovierung bekannt: 0%."
+        globals$renovierung$info_text <- "-> Auswahl fehlt <-" # Reflect no selection
       }
       
       # Remove "Vollmodernisierung" from the dropdown
@@ -522,6 +551,7 @@ server <- function(input, output, session) {
         session,
         "renovierung_main",
         choices = c(
+          "",
           "Keine Sanierung/Renovierung bekannt",
           "Teilrenovierung"
         )
@@ -532,6 +562,7 @@ server <- function(input, output, session) {
         session,
         "renovierung_main",
         choices = c(
+          "",
           "Keine Sanierung/Renovierung bekannt",
           "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
           "Teilrenovierung"
@@ -539,6 +570,7 @@ server <- function(input, output, session) {
       )
     }
   })
+  
   
   
   output$baujahr_factor <- renderText({
@@ -554,18 +586,26 @@ server <- function(input, output, session) {
       globals$renovierung$info_text <- "Keine Renovierung bekannt: 0%."
     } else if (input$renovierung_main == "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)") {
       if (input$baujahr >= "1990") {
+        # Notify user about invalid selection and reset dropdown
         showNotification("Vollmodernisierung ist nur bei Baujahr vor 1990 möglich.", type = "error")
-        updateSelectInput(session, "renovierung_main", selected = "Keine Sanierung/Renovierung bekannt")
+        updateSelectInput(session, "renovierung_main", selected = "") # Reset to empty
+        globals$renovierung$factor <- 0
+        globals$renovierung$info_text <- "-> Auswahl fehlt <-" # Reflect incomplete state
       } else {
         globals$renovierung$factor <- 0.11
         globals$renovierung$info_text <- "Vollmodernisierung: +11%."
       }
-    } else {
+    } else if (input$renovierung_main == "Teilrenovierung") {
       # Teilrenovierung: Reset factor and wait for details
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- "Bitte wählen Sie die durchgeführten Maßnahmen aus."
+    } else {
+      # Handle empty or invalid input
+      globals$renovierung$factor <- 0
+      globals$renovierung$info_text <- "-> Auswahl fehlt <-"
     }
   })
+  
   
   observeEvent(input$renovierung_details, {
     if (is.null(input$renovierung_details) || length(input$renovierung_details) < 3) {
@@ -586,68 +626,44 @@ server <- function(input, output, session) {
   
   
 # #----- Section 'sanitaer' -----
-#   # Observe input$sanitaer and update globals accordingly
-#    
-#   observeEvent(input$sanitaer, {
-#     if (is.null(input$sanitaer) || length(input$sanitaer) == 0) {
-#       globals$sanitaer$selection <- NULL
-#       globals$sanitaer$factor <- 0
-#       globals$sanitaer$info_text <- "-> Angabe fehlt <-"
-#     } else {
-#       valid_selections <- input$sanitaer
-#       if (length(valid_selections) >= 3) {
-#         globals$sanitaer$factor <- 0.06
-#         globals$sanitaer$info_text <- paste(
-#           "Selected options: ", paste(valid_selections, collapse = ", "),
-#           "<br>Sanitary bonus: +6%"
-#         )
-#       } else {
-#         globals$sanitaer$factor <- 0
-#         globals$sanitaer$info_text <- "At least 3 valid options are required for +6% bonus."
-#       }
-#       globals$sanitaer$selection <- valid_selections
-#     }
-#   })
-#   
-#   # Fill the outputs for sanitaer accordingly
-#   
-#   output$sanitaer_ug <- renderText({
-#     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$lo)) {
-#       adjusted_value <- globals$groesse$lo * globals$sanitaer$factor %>% round(2)
-#       fv(adjusted_value, " €/m²")
-#     } else {
-#       "->"
-#     }
-#   })
-#   
-#   output$sanitaer_oue <- renderText({
-#     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$mid)) {
-#       adjusted_value <- globals$groesse$mid * globals$sanitaer$factor %>% round(2)
-#       fv(adjusted_value, " €/m²")
-#     } else {
-#       "Auswahl fehlt"
-#     }
-#   })
-#   
-#   output$sanitaer_og <- renderText({
-#     if (!is.null(globals$sanitaer$selection) && !is.na(globals$groesse$hi)) {
-#       adjusted_value <- globals$groesse$hi * globals$sanitaer$factor %>% round(2)
-#       fv(adjusted_value, " €/m²")
-#     } else {
-#       "<-"
-#     }
-#   })
-#   
-#   output$sanitaer_info <- renderText({
-#     if (is.null(globals$sanitaer$selection) || length(globals$sanitaer$selection) == 0) {
-#       ""
-#     } else {
-#       HTML(
-#         paste(fv(globals$sanitaer$factor * 100, " %"))
-#       )
-#     }
-#   })
-#   
+  observeEvent(input$sanitaer_main, {
+    if (is.null(input$sanitaer_main) || input$sanitaer_main == "") {
+      # No selection: Reset globals
+      globals$sanitaer$factor <- 0
+      globals$sanitaer$info_text <- "-> Auswahl fehlt <-"
+      shinyjs::show("sanitaer_hint")
+    } else if (input$sanitaer_main == "Keine besondere Sanitärausstattung") {
+      # Finalize with 0% for "Keine"
+      globals$sanitaer$factor <- 0
+      globals$sanitaer$info_text <- "Keine besondere Sanitärausstattung: 0%."
+      shinyjs::hide("sanitaer_hint")
+    } else if (input$sanitaer_main == "Verbesserte Sanitärausstattung") {
+      # Show detailed options for "Verbesserte"
+      globals$sanitaer$factor <- 0
+      globals$sanitaer$info_text <- "Bitte wählen Sie die Verbesserungen aus."
+      shinyjs::hide("sanitaer_hint")
+    }
+  })
+  
+  observeEvent(input$sanitaer_details, {
+    if (is.null(input$sanitaer_details) || length(input$sanitaer_details) < 3) {
+      # Fewer than 3 valid selections
+      globals$sanitaer$factor <- 0
+      globals$sanitaer$info_text <- "Für +6% sind mindestens drei Maßnahmen erforderlich."
+    } else {
+      # At least 3 selections
+      globals$sanitaer$factor <- 0.06
+      globals$sanitaer$info_text <- paste(
+        "Verbesserte Sanitärausstattung: +6% (", length(input$sanitaer_details), " Maßnahmen ausgewählt)"
+      )
+    }
+  })
+  
+  
+  output$sanitaer_factor <- renderText({
+    globals$sanitaer$info_text
+  })
+    
 # #----- Section 'ausstattung' -----
 #   # Observe input$ausstattung and update globals accordingly
 #   # Use -> Angabe fehlt <- as default value for missing selections
