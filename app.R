@@ -164,32 +164,30 @@ ui <- fluidPage(
     #---- Renovierungsauswahl -----
     fluidRow(
       class = "framed-row",
-      id = "renovierung_row",
+      id = "renovierung_row", # Unique ID for styling
       column(
         width = 6,
-        # Step 1: Renovation toggle button
-        actionButton(
-          inputId = "renovierung_toggle",
-          label = "Keine Renovierung bekannt", # Default state
-          class = "btn-primary"
+        # Step 1: Dropdown for high-level renovation selection
+        selectInput(
+          inputId = "renovierung_main",
+          label = "Renovierungsart",
+          choices = c(
+            "Keine Sanierung/Renovierung bekannt",
+            "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
+            "Teilrenovierung"
+          ),
+          selected = "Keine Sanierung/Renovierung bekannt"
         ),
-        br(), br(),
-        # Step 2: Voll/Teil buttons
-        actionButton(
-          inputId = "renovierung_type",
-          label = "Vollrenovierung | Teilrenovierungen",
-          class = "btn-secondary"
-        ),
-        br(), br(),
-        # Step 3: Detailed checkboxes
-        checkboxGroupInput(
-          inputId = "renovierung_measures",
-          label = "Welche Maßnahmen wurden durchgeführt?",
-          choices = setdiff(
-            ref_renovation$Option,
-            c(
-              "Keine Sanierung/Renovierung bekannt",
-              "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)"
+        # Step 2: Checkboxes for Teilrenovierung (hidden by default)
+        conditionalPanel(
+          condition = "input.renovierung_main == 'Teilrenovierung'",
+          checkboxGroupInput(
+            inputId = "renovierung_details",
+            label = "Welche Maßnahmen wurden durchgeführt?",
+            choices = setdiff(
+              ref_renovation$Option,
+              c("Keine Sanierung/Renovierung bekannt", 
+                "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)")
             )
           )
         )
@@ -197,9 +195,7 @@ ui <- fluidPage(
       column(
         width = 6,
         # Display renovation factor as output
-        htmlOutput("renovierung_factor"),
-        # Optionally, include a debug output for now
-        htmlOutput("debug_renovierung_ui")
+        htmlOutput("renovierung_factor")
       )
     ),
     
@@ -347,7 +343,7 @@ server <- function(input, output, session) {
   showHintIfEmpty(input, "adresse", "adresse_hint", "adresse_row", session)
   showHintIfEmpty(input, "groesse", "groesse_hint", "groesse_row", session)
   showHintIfEmpty(input, "baujahr", "baujahr_hint", "baujahr_row", session)
-  showHintIfEmpty(input, "renovierung_measures", "renovierung_hint", "renovierung_row", session)
+  showHintIfEmpty(input, "renovierung_main", "renovierung_hint", "renovierung_row", session)
   showHintIfEmpty(input, "sanitaer", "sanitaer_hint", "sanitaer_row",  session)
   showHintIfEmpty(input, "ausstattung", "ausstattung_hint", "ausstattung_row", session)
   
@@ -508,6 +504,43 @@ server <- function(input, output, session) {
     }
   })
   
+  observeEvent(input$baujahr, {
+    if (input$baujahr >= "1990") {
+      if (input$renovierung_main == "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)") {
+        # If "Vollmodernisierung" is selected, reset to "Keine Renovierung bekannt"
+        updateSelectInput(
+          session,
+          "renovierung_main",
+          selected = "Keine Sanierung/Renovierung bekannt"
+        )
+        globals$renovierung$factor <- 0
+        globals$renovierung$info_text <- "Keine Renovierung bekannt: 0%."
+      }
+      
+      # Remove "Vollmodernisierung" from the dropdown
+      updateSelectInput(
+        session,
+        "renovierung_main",
+        choices = c(
+          "Keine Sanierung/Renovierung bekannt",
+          "Teilrenovierung"
+        )
+      )
+    } else {
+      # Add "Vollmodernisierung" back if Baujahr allows it
+      updateSelectInput(
+        session,
+        "renovierung_main",
+        choices = c(
+          "Keine Sanierung/Renovierung bekannt",
+          "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
+          "Teilrenovierung"
+        )
+      )
+    }
+  })
+  
+  
   output$baujahr_factor <- renderText({
     globals$baujahr$info_text
   })
@@ -515,8 +548,42 @@ server <- function(input, output, session) {
   
   
 #----- Section 'renovierung' -----
-  # Observe 'baujahr' and disable 'Vollmod.." if Baujahr >= "1990"
-
+  observeEvent(input$renovierung_main, {
+    if (input$renovierung_main == "Keine Sanierung/Renovierung bekannt") {
+      globals$renovierung$factor <- 0
+      globals$renovierung$info_text <- "Keine Renovierung bekannt: 0%."
+    } else if (input$renovierung_main == "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)") {
+      if (input$baujahr >= "1990") {
+        showNotification("Vollmodernisierung ist nur bei Baujahr vor 1990 möglich.", type = "error")
+        updateSelectInput(session, "renovierung_main", selected = "Keine Sanierung/Renovierung bekannt")
+      } else {
+        globals$renovierung$factor <- 0.11
+        globals$renovierung$info_text <- "Vollmodernisierung: +11%."
+      }
+    } else {
+      # Teilrenovierung: Reset factor and wait for details
+      globals$renovierung$factor <- 0
+      globals$renovierung$info_text <- "Bitte wählen Sie die durchgeführten Maßnahmen aus."
+    }
+  })
+  
+  observeEvent(input$renovierung_details, {
+    if (is.null(input$renovierung_details) || length(input$renovierung_details) < 3) {
+      globals$renovierung$factor <- 0
+      globals$renovierung$info_text <- "Für +6% sind mindestens drei Maßnahmen erforderlich."
+    } else {
+      globals$renovierung$factor <- 0.06
+      globals$renovierung$info_text <- paste(
+        "Teilrenovierung: +6% (", length(input$renovierung_details), " Maßnahmen ausgewählt)"
+      )
+    }
+  })
+  
+  output$renovierung_factor <- renderText({
+    globals$renovierung$info_text
+  })
+  
+  
   
 # #----- Section 'sanitaer' -----
 #   # Observe input$sanitaer and update globals accordingly
