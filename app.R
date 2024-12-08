@@ -222,7 +222,7 @@ ui <- fluidPage(
           condition = "input.sanitaer_main == 'Verbesserte Sanitärausstattung'",
           checkboxGroupInput(
             inputId = "sanitaer_details",
-            label = "Welche Verbesserungen sind vorhanden?",
+            label = "Welche Sanitärausstattungen wurden hinzugefügt?",
             choices = ref_sanitaer[-1]
           )
         )
