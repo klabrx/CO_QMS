@@ -14,8 +14,7 @@ library(shinyjs)
 source("data_sources.R")
 source("functions.R")
 
-#----- 
-
+#----- User Interface ----
 ui <- fluidPage(
   useShinyjs(), # Enable shinyjs for JavaScript interactions
   tags$head(
@@ -283,31 +282,49 @@ ui <- fluidPage(
         htmlOutput("ausstattung_factor")
       )
     )
+    ),
+    fluidRow(
+      class = "framed-row",
+      id = "zusammenfassung_row",
+      column(
+        width = 6,
+        # Slider for fine-tuning groesse
+        sliderInput(
+          inputId = "slider_groesse",
+          label = "Feinanpassung der Wohnungsgröße (in m²):",
+          min = 25,
+          max = 125,
+          value = 70,
+          step = 0.1
+        )
+      ),
+      column(
+        width = 6,
+        # Display summary information
+        div(
+          htmlOutput("sum_factors"), # Sum of all factors
+          br(),
+          htmlOutput("adjusted_values"), # Adjusted lo|mid|hi values
+          br(),
+          htmlOutput("final_values") # Final values after slider adjustment
+        )
+      )
     )
+    
   )
 )
     
     #---- Zusammenfassung und Spannengrenzen -----
+    
 
 server <- function(input, output, session) {
-  updateSelectInput(
-    session,
-    "renovierung_main",
-    selected = ""
-  )
-  
-  
-  
-#---- aliases for functions
-  fv <- format_value
-  
   #----- Define global variables ------
   globals <- reactiveValues(
     # Section: Wohnungsgröße
     groesse = list(
       selection = NULL,  # Selected size category (e.g., "50-60 m²")
       factor = 1,        # Default factor for size (100%)
-      info_text = NULL,  # Informational text for display
+      info_text = "Bitte wählen Sie die Wohnungsgröße aus.",  # Informational text for display
       lo = NA_real_,     # Lower range value
       mid = NA_real_,    # Midpoint value
       hi = NA_real_      # Upper range value
@@ -337,6 +354,7 @@ server <- function(input, output, session) {
     
     # Section: Sanitär
     sanitaer = list(
+      selection = NULL,  # Selected sanitär measures (added for consistency)
       factor = 0,        # Sanitär-specific factor
       info_text = "Bitte wählen Sie die Sanitärausstattung aus."  # Text for display
     ),
@@ -351,12 +369,33 @@ server <- function(input, output, session) {
     # Section: Aggregation
     sum = list(
       factor = 0,        # Aggregated factor across all inputs
+      breakdown = list(  # Optional: Breakdown of individual factors
+        groesse = 0,
+        adresse = 0,
+        baujahr = 0,
+        renovierung = 0,
+        sanitaer = 0,
+        ausstattung = 0
+      ),
       info_text = "Gesamtsumme der Faktoren noch nicht berechnet."  # Summary info text
     )
   )
   
   
-
+  
+  
+  
+  # updateSelectInput(
+  #   session,
+  #   "renovierung_main",
+  #   selected = ""
+  # )
+  
+  
+  
+#---- aliases for functions
+  fv <- format_value
+  
   #---- Hinweistexte bei fehlender Eingabe -----
   # Hints werden ausgeblendet, sobald eine gültige Eingabe erfolgt ist.
   showHintIfEmpty(input, "adresse", "adresse_hint", "adresse_row", session)
@@ -388,6 +427,8 @@ server <- function(input, output, session) {
       }
     }
   })
+  
+  
   
   # Render all groesse outputs based on globals
   output$groesse_info <- renderText({
@@ -694,10 +735,66 @@ server <- function(input, output, session) {
     }
   })
   
-  
   output$ausstattung_factor <- renderText({
     globals$ausstattung$info_text
   })
+  
+  #------ Section 'zusammenfassung' -----
+  
+  output$sum_factors <- renderText({
+    sum_factors <- sum(
+      globals$adresse$factor,
+      globals$baujahr$factor,
+      globals$renovierung$factor,
+      globals$sanitaer$factor,
+      globals$ausstattung$factor,
+      na.rm = TRUE
+    )
+    paste("Summe der Faktoren:", format_value(sum_factors * 100, " %", add_plus = TRUE))
+  })
+  
+  output$adjusted_values <- renderText({
+    sum_factors <- sum(
+      globals$adresse$factor,
+      globals$baujahr$factor,
+      globals$renovierung$factor,
+      globals$sanitaer$factor,
+      globals$ausstattung$factor,
+      na.rm = TRUE
+    )
+    adjusted_lo <- globals$groesse$lo * (1 + sum_factors)
+    adjusted_mid <- globals$groesse$mid * (1 + sum_factors)
+    adjusted_hi <- globals$groesse$hi * (1 + sum_factors)
+    paste0(
+      "Angepasste Werte: ",
+      "UG: ", format_value(adjusted_lo, " €/m²"), ", ",
+      "OUE: ", format_value(adjusted_mid, " €/m²"), ", ",
+      "OG: ", format_value(adjusted_hi, " €/m²")
+    )
+  })
+  
+  output$final_values <- renderText({
+    sum_factors <- sum(
+      globals$adresse$factor,
+      globals$baujahr$factor,
+      globals$renovierung$factor,
+      globals$sanitaer$factor,
+      globals$ausstattung$factor,
+      na.rm = TRUE
+    )
+    slider_value <- input$slider_groesse
+    final_lo <- globals$groesse$lo * (1 + sum_factors) * slider_value
+    final_mid <- globals$groesse$mid * (1 + sum_factors) * slider_value
+    final_hi <- globals$groesse$hi * (1 + sum_factors) * slider_value
+    paste0(
+      "Endgültige Werte: ",
+      "UG: ", format_value(final_lo, " €"), ", ",
+      "OUE: ", format_value(final_mid, " €"), ", ",
+      "OG: ", format_value(final_hi, " €")
+    )
+  })
+  
+  
   
   
 
