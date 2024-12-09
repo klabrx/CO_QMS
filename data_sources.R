@@ -132,13 +132,25 @@ ref_sanitaer <- c(
 )
 
 # Define Ausstattung items with corresponding percentages
-ref_ausstattung <- list(
-  "Keine besondere Ausstattung" = 0.00,
-  "Einbauküche mit mindestens drei Elektroeinbaugeräten (z. B. Herd/Ofen, Gefrierschrank/-truhe, Kühlschrank, Geschirrspülmaschine) wird vom Vermieter ohne zusätzlichen Mietzuschlag gestellt. (+4%)" = 0.04,
-  "Terrasse oder Dachterrasse (+6%)" = 0.06,
-  "Aufzug in Gebäuden mit weniger als 5 Stockwerken (+7%)" = 0.07,
-  "Überwiegend Parkett-, Dielen- oder Steinfußboden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut (+3%)" = 0.03,
-  "Energiebedarfsklasse lt. Energiebedarfsausweis lautet F, G oder H; bzw. der Wert kWh/m2a ist größer oder gleich 200 (-9%)" = -0.09,
-  "Teppichboden, PVC- oder Linoleum-Boden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut, welcher seit 2013 nicht modernisiert bzw. saniert wurde (-11%)" = -0.11
+ref_ausstattung <- tibble::tibble(
+  Option = c(
+    "Keine besondere Ausstattung",
+    "Einbauküche mit mindestens drei Elektroeinbaugeräten (z. B. Herd/Ofen, Gefrierschrank/-truhe, Kühlschrank, Geschirrspülmaschine) wird vom Vermieter ohne zusätzlichen Mietzuschlag gestellt. (+4%)",
+    "Terrasse oder Dachterrasse (+6%)",
+    "Aufzug in Gebäuden mit weniger als 5 Stockwerken (+7%)",
+    "Überwiegend Parkett-, Dielen- oder Steinfußboden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut (+3%)",
+    "Energiebedarfsklasse lt. Energiebedarfsausweis lautet F, G oder H; bzw. der Wert kWh/m2a ist größer oder gleich 200 (-9%)",
+    "Teppichboden, PVC- oder Linoleum-Boden im überwiegenden Teil des Wohn-/Schlafbereichs, abgesehen von Flur/Bad verbaut, welcher seit 2013 nicht modernisiert bzw. saniert wurde (-11%)"
+  ),
+  Factor = c(
+    0.00,
+    0.04,
+    0.06,
+    0.07,
+    0.03,
+    -0.09,
+    -0.11
+  )
 )
+
 

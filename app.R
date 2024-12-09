@@ -8,7 +8,7 @@ library(leaflet)
 library(shinyjs)
 library(markdown)
 library(tinytex)
-library(mapview)
+#library(mapview)
 library(shinyjs)
 
 source("data_sources.R")
@@ -245,74 +245,50 @@ ui <- fluidPage(
     #---- Ausstattungsauswahl -----
     fluidRow(
       class = "framed-row",
-      id = "ausstattung_row",
-      column(
-        width = 4, checkboxGroupInput("ausstattung", "Ausstattung",
-          choices = names(ref_ausstattung)
-        ),
-        div(
-          id = "ausstattung_hint", "Bitte wählen Sie aus den ",
-          "Ausstattungsmerkmalen die zutreffenden aus. Jedes Merkmal ",
-          "sorgt für einen Zu- oder Abschlag, diese werden automatisch ",
-          "aufsummiert."
-        )
-      ),
-      column(width = 2, br(), htmlOutput("ausstattung_info")),
-      column(width = 2, br(), htmlOutput("ausstattung_ug")),
-      column(width = 2, br(), htmlOutput("ausstattung_oue")),
-      column(width = 2, br(), htmlOutput("ausstattung_og"))
-    ),
-    #---- Zusammenfassung und Spannengrenzen -----
-    fluidRow(
-      class = "framed-row",
-      id = "summary_row",
+      id = "ausstattung_row", # Unique ID for styling
       column(
         width = 6,
-        strong("Zusammenfassung und Spannengrenzen:"),
-        br(), # Line break for spacing
-        sliderInput(
-          inputId = "slider_groesse",
-          label = "Feinangabe im Größenbereich (m²)",
-          min = 25, # Default lower limit (to be updated dynamically)
-          max = 150, # Default upper limit (to be updated dynamically)
-          value = 50, # Initial value (can be set as desired)
-          step = 0.1
+        # Primary dropdown for Ausstattung options
+        selectInput(
+          inputId = "ausstattung_main",
+          label = "Ausstattung",
+          choices = c(
+            "", # Empty value for initial state
+            "Keine besondere Ausstattung",
+            "Besonderheiten in der Ausstattung"
+          ),
+          selected = "" # Start with no selection
         ),
-        br(), downloadButton("downloadReport", "Download Report")
-      ),
-      column(
-        width = 2,
-        div(
-          HTML("Untere Grenze"),
-          br(), br(), # Line break for spacing
-          htmlOutput("sum_ug"),
-          br(), # Line break for spacing
-          htmlOutput("total_ug") # New output for total UG
+        # Secondary checkbox group for detailed options (hidden by default)
+        conditionalPanel(
+          condition = "input.ausstattung_main == 'Besonderheiten in der Ausstattung'",
+          checkboxGroupInput(
+            inputId = "ausstattung_details",
+            label = "Welche Ausstattungsmerkmale treffen zu?",
+            choices = ref_ausstattung %>% 
+              dplyr::filter(Option != "Keine besondere Ausstattung") %>% 
+              dplyr::pull(Option) # Exclude the first option and extract the labels          )
         )
       ),
       column(
-        width = 2,
+        width = 6,
+        # Hint text for Ausstattung section
         div(
-          HTML("<strong>Ortsüblich</strong>"),
-          br(), br(), # Line break for spacing
-          htmlOutput("sum_oue"),
-          br(), # Line break for spacing
-          htmlOutput("total_oue") # New output for total OUE
-        )
-      ),
-      column(
-        width = 2,
-        div(
-          HTML("Obere Grenze"),
-          br(), br(), # Line break for spacing
-          htmlOutput("sum_og"),
-          br(), # Line break for spacing
-          htmlOutput("total_og") # New output for total OG
-        )
+          id = "ausstattung_hint",
+          "Bitte wählen Sie die Besonderheiten der Ausstattung aus. ",
+          "Jede Auswahl trägt mit einem individuellen Faktor zum ",
+          "Ausstattungsfaktor bei."
+        ),
+        # Display Ausstattung factor as output
+        htmlOutput("ausstattung_factor")
       )
+    )
     )
   )
 )
+    
+    #---- Zusammenfassung und Spannengrenzen -----
+
 server <- function(input, output, session) {
   updateSelectInput(
     session,
@@ -325,7 +301,7 @@ server <- function(input, output, session) {
 #---- aliases for functions
   fv <- format_value
   
-#----- Define global variables ------
+  #----- Define global variables ------
   globals <- reactiveValues(
     # Section: Wohnungsgröße
     groesse = list(
@@ -359,12 +335,26 @@ server <- function(input, output, session) {
       info_text = "Bitte wählen Sie Renovierungsmaßnahmen aus."  # Text for display
     ),
     
+    # Section: Sanitär
+    sanitaer = list(
+      factor = 0,        # Sanitär-specific factor
+      info_text = "Bitte wählen Sie die Sanitärausstattung aus."  # Text for display
+    ),
+    
+    # Section: Ausstattung
+    ausstattung = list(
+      selection = NULL,  # Selected ausstattung measures
+      factor = 0,        # Sum of factors for selected measures
+      info_text = "Bitte wählen Sie die Besonderheiten der Ausstattung aus."  # Text for display
+    ),
+    
     # Section: Aggregation
     sum = list(
       factor = 0,        # Aggregated factor across all inputs
       info_text = "Gesamtsumme der Faktoren noch nicht berechnet."  # Summary info text
     )
   )
+  
   
 
   #---- Hinweistexte bei fehlender Eingabe -----
@@ -374,7 +364,7 @@ server <- function(input, output, session) {
   showHintIfEmpty(input, "baujahr", "baujahr_hint", "baujahr_row", session)
   showHintIfEmpty(input, "renovierung_main", "renovierung_hint", "renovierung_row", session)
   showHintIfEmpty(input, "sanitaer_main", "sanitaer_hint", "sanitaer_row",  session)
-  showHintIfEmpty(input, "ausstattung", "ausstattung_hint", "ausstattung_row", session)
+  showHintIfEmpty(input, "ausstattung_main", "ausstattung_hint", "ausstattung_row", session)
   
 #----- Section 'groesse' -----
   # Observe input$groesse and update globals accordingly
@@ -631,17 +621,17 @@ server <- function(input, output, session) {
       # No selection: Reset globals
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- "-> Auswahl fehlt <-"
-      shinyjs::show("sanitaer_hint")
+      #shinyjs::show("sanitaer_hint")
     } else if (input$sanitaer_main == "Keine besondere Sanitärausstattung") {
       # Finalize with 0% for "Keine"
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- "Keine besondere Sanitärausstattung: 0%."
-      shinyjs::hide("sanitaer_hint")
+      #shinyjs::hide("sanitaer_hint")
     } else if (input$sanitaer_main == "Verbesserte Sanitärausstattung") {
       # Show detailed options for "Verbesserte"
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- "Bitte wählen Sie die Verbesserungen aus."
-      shinyjs::hide("sanitaer_hint")
+      #shinyjs::hide("sanitaer_hint")
     }
   })
   
@@ -665,164 +655,52 @@ server <- function(input, output, session) {
   })
     
 # #----- Section 'ausstattung' -----
-#   # Observe input$ausstattung and update globals accordingly
-#   # Use -> Angabe fehlt <- as default value for missing selections
-#   # Every selection carries its own factor, which is added to the global factor
-#   
-#   observeEvent(input$ausstattung, {
-#     if (is.null(input$ausstattung) || length(input$ausstattung) == 0) {
-#       globals$ausstattung$selection <- NULL
-#       globals$ausstattung$factor <- 0
-#       globals$ausstattung$info_text <- "-> Angabe fehlt <-"
-#     } else {
-#       valid_selections <- input$ausstattung
-#       factor <- sum(unlist(ref_ausstattung[valid_selections]))
-#       globals$ausstattung$factor <- factor
-#       globals$ausstattung$selection <- valid_selections
-#       globals$ausstattung$info_text <- paste(
-#         "Selected options: ", paste(valid_selections, collapse = ", "),
-#         "<br>Sum of factors: ", factor
-#       )
-#     }
-#   })
-#   
-#   # Fill the outputs for ausstattung accordingly
-#   
-#   output$ausstattung_ug <- renderText({
-#     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$lo)) {
-#       adjusted_value <- globals$groesse$lo * globals$ausstattung$factor %>% round(2)
-#       fv(adjusted_value, " €/m²")
-#     } else {
-#       "->"
-#     }
-#   })
-#   
-#   output$ausstattung_oue <- renderText({
-#     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$mid)) {
-#       adjusted_value <- globals$groesse$mid * globals$ausstattung$factor %>% round(2)
-#       fv(adjusted_value, " €/m²")
-#     } else {
-#       "Auswahl fehlt"
-#     }
-#   })
-#   
-#   output$ausstattung_og <- renderText({
-#     if (!is.null(globals$ausstattung$selection) && !is.na(globals$groesse$hi)) {
-#       adjusted_value <- globals$groesse$hi * globals$ausstattung$factor %>% round(2)
-#       fv(adjusted_value, " €/m²")
-#     } else {
-#       "<-"
-#     }
-#   })
-#   
-#   output$ausstattung_info <- renderText({
-#     if (is.null(globals$ausstattung$selection) || length(globals$ausstattung$selection) == 0) {
-#       ""
-#     } else {
-#       HTML(
-#         globals$ausstattung$info_text
-#       )
-#     }
-#   })
-#   
-# #----- Section Zusammenfassung und Spannengrenzen -----
-#   # This section aggregates all the globals and calculates the total values
-#   # for the lower, middle, and upper bounds. The total values are calculated
-#   # by summing the individual factors for each section.
-#   # The slider input is used to adjust the granularity of the size range.
-#   # The download button is used to render the report as an HTML file.
-#   
-#   # Calculate the total values for the lower, middle, and upper bounds
-#   
-#   output$sum_ug <- renderText({
-#     if (!is.null(globals$groesse$lo)) {
-#       sum_value <- sum(
-#         globals$groesse$lo,
-#         globals$adresse$factor * globals$groesse$lo,
-#         globals$baujahr$factor * globals$groesse$lo,
-#         globals$renovierung$factor * globals$groesse$lo,
-#         globals$sanitaer$factor * globals$groesse$lo,
-#         globals$ausstattung$factor * globals$groesse$lo
-#       )
-#       fv(sum_value, " €/m²")
-#     } else {
-#       "->"
-#     }
-#   })
-#   
-#   output$sum_oue <- renderText({
-#     if (!is.null(globals$groesse$mid)) {
-#       sum_value <- sum(
-#         globals$groesse$mid,
-#         globals$adresse$factor * globals$groesse$mid,
-#         globals$baujahr$factor * globals$groesse$mid,
-#         globals$renovierung$factor * globals$groesse$mid,
-#         globals$sanitaer$factor * globals$groesse$mid,
-#         globals$ausstattung$factor * globals$groesse$mid
-#       )
-#       fv(sum_value, " €/m²")
-#     } else {
-#       "Auswahl fehlt"
-#     }
-#   })
-#   
-#   output$sum_og <- renderText({
-#     if (!is.null(globals$groesse$hi)) {
-#       sum_value <- sum(
-#         globals$groesse$hi,
-#         globals$adresse$factor * globals$groesse$hi,
-#         globals$baujahr$factor * globals$groesse$hi,
-#         globals$renovierung$factor * globals$groesse$hi,
-#         globals$sanitaer$factor * globals$groesse$hi,
-#         globals$ausstattung$factor * globals$groesse$hi
-#       )
-#       fv(sum_value, " €/m²")
-#     } else {
-#       "<-"
-#     }
-#   })
-#   
-#   # Calculate the total values for the lower, middle, and upper bounds
-#   # by multiplying the sums with the slider value, thus resulting in a value not
-#   # only for a single square meter but for the appartment as a whole
-#   
-#   observeEvent(input$slider_groesse, {
-#     if (!is.null(globals$groesse$lo)) {
-#       globals$totals$ug <- globals$sums$ug * input$slider_groesse
-#       globals$totals$oue <- globals$sums$oue * input$slider_groesse
-#       globals$totals$og <- globals$sums$og * input$slider_groesse
-#     }
-#   })
-#   
-#   output$total_ug <- renderText({
-#     if (!is.null(globals$groesse$lo)) {
-#       fv(globals$totals$ug, " €")
-#     } else {
-#       "->"
-#     }
-#   })
-#   
-#   output$total_oue <- renderText({
-#     if (!is.null(globals$groesse$mid)) {
-#       fv(globals$totals$oue, " €")
-#     } else {
-#       "Auswahl fehlt"
-#     }
-#   })
-#   
-#   output$total_og <- renderText({
-#     if (!is.null(globals$groesse$hi)) {
-#       fv(globals$totals$og, " €")
-#     } else {
-#       "<-"
-#     }
-#   })
-#   
-#   
-#   
-#   
-#   
-#     
+  observeEvent(input$ausstattung_main, {
+    if (is.null(input$ausstattung_main) || input$ausstattung_main == "") {
+      # No selection: Reset globals
+      globals$ausstattung$factor <- 0
+      globals$ausstattung$info_text <- "-> Auswahl fehlt <-"
+      #shinyjs::show("ausstattung_hint")
+    } else if (input$ausstattung_main == "Keine besondere Ausstattung") {
+      # Finalize with 0% for "Keine"
+      globals$ausstattung$factor <- 0
+      globals$ausstattung$info_text <- "Keine besondere Ausstattung: 0%."
+      #shinyjs::hide("ausstattung_hint")
+    } else if (input$ausstattung_main == "Besonderheiten in der Ausstattung") {
+      # Wait for detailed options
+      globals$ausstattung$factor <- 0
+      globals$ausstattung$info_text <- "Bitte wählen Sie die Ausstattungsmerkmale aus."
+      #shinyjs::hide("ausstattung_hint")
+    }
+  })
+  
+  observeEvent(input$ausstattung_details, {
+    if (is.null(input$ausstattung_details) || length(input$ausstattung_details) == 0) {
+      # No selections
+      globals$ausstattung$factor <- 0
+      globals$ausstattung$info_text <- "Für die Ausstattung wurden keine Besonderheiten ausgewählt."
+    } else {
+      # Calculate the total factor based on selected options
+      selected_factors <- ref_ausstattung %>%
+        dplyr::filter(Option %in% input$ausstattung_details) %>%
+        dplyr::pull(Factor)
+      
+      total_factor <- sum(selected_factors, na.rm = TRUE)
+      globals$ausstattung$factor <- total_factor
+      globals$ausstattung$info_text <- paste0(
+        "Ausstattungsfaktor: ", format_value(total_factor * 100, " %", add_plus = TRUE),
+        " (", length(input$ausstattung_details), " Merkmale ausgewählt)"
+      )
+    }
+  })
+  
+  
+  output$ausstattung_factor <- renderText({
+    globals$ausstattung$info_text
+  })
+  
+  
+
 #   #----- Render Report -----
 #   # Render the report as a downloadable HTML file, using the globals to pass the
 #   # necessary information to the report. The report is rendered using the
