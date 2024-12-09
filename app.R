@@ -300,16 +300,41 @@ ui <- fluidPage(
       ),
       column(
         width = 6,
-        # Display summary information
+        # Top sub-row for the sum of factors
         div(
-          htmlOutput("sum_factors"), # Sum of all factors
-          br(),
-          htmlOutput("adjusted_values"), # Adjusted lo|mid|hi values
-          br(),
-          htmlOutput("final_values") # Final values after slider adjustment
+          htmlOutput("sum_factors"), # Display globals$sum$info_text
+          style = "font-weight: bold; text-align: center; margin-bottom: 10px;"
+        ),
+        # Bottom sub-row for the three sub-columns
+        fluidRow(
+          column(
+            width = 4,
+            div(
+              htmlOutput("lower_limit"), # Untere Grenze: groesse_result * sum_factor
+              br(),
+              htmlOutput("lower_limit_final") # Result * slider_value
+            )
+          ),
+          column(
+            width = 4,
+            div(
+              htmlOutput("typical_value"), # Ortsüblich: groesse_result * sum_factor
+              br(),
+              htmlOutput("typical_value_final") # Result * slider_value
+            )
+          ),
+          column(
+            width = 4,
+            div(
+              htmlOutput("upper_limit"), # Obere Grenze: groesse_result * sum_factor
+              br(),
+              htmlOutput("upper_limit_final") # Result * slider_value
+            )
+          )
         )
       )
     )
+    
     
   )
 )
@@ -739,60 +764,70 @@ server <- function(input, output, session) {
     globals$ausstattung$info_text
   })
   
-  #------ Section 'zusammenfassung' -----
+  #------ Section 'zusammenfassung' ------
   
+  #------ Section 'zusammenfassung' ------
+  
+  # Sum of all factors
+  observe({
+    sum_factors <- sum(
+      globals$adresse$factor,
+      globals$baujahr$factor,
+      globals$renovierung$factor,
+      globals$sanitaer$factor,
+      globals$ausstattung$factor,
+      na.rm = TRUE
+    )
+    
+    # Store the aggregated factor in globals
+    globals$sum$factor <- sum_factors
+    globals$sum$info_text <- paste("Summe der Faktoren:", format_value(sum_factors * 100, " %", add_plus = TRUE))
+  })
+  
+  # Render sum of factors (for debugging or display)
   output$sum_factors <- renderText({
-    sum_factors <- sum(
-      globals$adresse$factor,
-      globals$baujahr$factor,
-      globals$renovierung$factor,
-      globals$sanitaer$factor,
-      globals$ausstattung$factor,
-      na.rm = TRUE
-    )
-    paste("Summe der Faktoren:", format_value(sum_factors * 100, " %", add_plus = TRUE))
+    req(globals$sum$factor)
+    paste("Summe der Faktoren:", format_value(globals$sum$factor * 100, " %", add_plus = TRUE))
   })
   
-  output$adjusted_values <- renderText({
-    sum_factors <- sum(
-      globals$adresse$factor,
-      globals$baujahr$factor,
-      globals$renovierung$factor,
-      globals$sanitaer$factor,
-      globals$ausstattung$factor,
-      na.rm = TRUE
-    )
-    adjusted_lo <- globals$groesse$lo * (1 + sum_factors)
-    adjusted_mid <- globals$groesse$mid * (1 + sum_factors)
-    adjusted_hi <- globals$groesse$hi * (1 + sum_factors)
-    paste0(
-      "Angepasste Werte: ",
-      "UG: ", format_value(adjusted_lo, " €/m²"), ", ",
-      "OUE: ", format_value(adjusted_mid, " €/m²"), ", ",
-      "OG: ", format_value(adjusted_hi, " €/m²")
-    )
+  # Intermediate Values (groesse_result * (1 + sum_factors))
+  output$lower_limit <- renderText({
+    req(globals$groesse$lo, globals$sum$factor)
+    adjusted_lo <- globals$groesse$lo * (1 + globals$sum$factor)
+    format_value(adjusted_lo, " €/m²")
   })
   
-  output$final_values <- renderText({
-    sum_factors <- sum(
-      globals$adresse$factor,
-      globals$baujahr$factor,
-      globals$renovierung$factor,
-      globals$sanitaer$factor,
-      globals$ausstattung$factor,
-      na.rm = TRUE
-    )
-    slider_value <- input$slider_groesse
-    final_lo <- globals$groesse$lo * (1 + sum_factors) * slider_value
-    final_mid <- globals$groesse$mid * (1 + sum_factors) * slider_value
-    final_hi <- globals$groesse$hi * (1 + sum_factors) * slider_value
-    paste0(
-      "Endgültige Werte: ",
-      "UG: ", format_value(final_lo, " €"), ", ",
-      "OUE: ", format_value(final_mid, " €"), ", ",
-      "OG: ", format_value(final_hi, " €")
-    )
+  output$typical_value <- renderText({
+    req(globals$groesse$mid, globals$sum$factor)
+    adjusted_mid <- globals$groesse$mid * (1 + globals$sum$factor)
+    format_value(adjusted_mid, " €/m²")
   })
+  
+  output$upper_limit <- renderText({
+    req(globals$groesse$hi, globals$sum$factor)
+    adjusted_hi <- globals$groesse$hi * (1 + globals$sum$factor)
+    format_value(adjusted_hi, " €/m²")
+  })
+  
+  # Final Values (intermediate values * slider_groesse)
+  output$lower_limit_final <- renderText({
+    req(globals$groesse$lo, globals$sum$factor, input$slider_groesse)
+    final_lo <- globals$groesse$lo * (1 + globals$sum$factor) * input$slider_groesse
+    format_value(final_lo, " €")
+  })
+  
+  output$typical_value_final <- renderText({
+    req(globals$groesse$mid, globals$sum$factor, input$slider_groesse)
+    final_mid <- globals$groesse$mid * (1 + globals$sum$factor) * input$slider_groesse
+    format_value(final_mid, " €")
+  })
+  
+  output$upper_limit_final <- renderText({
+    req(globals$groesse$hi, globals$sum$factor, input$slider_groesse)
+    final_hi <- globals$groesse$hi * (1 + globals$sum$factor) * input$slider_groesse
+    format_value(final_hi, " €")
+  })
+  
   
   
   
