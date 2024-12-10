@@ -8,7 +8,6 @@ library(leaflet)
 library(shinyjs)
 library(markdown)
 library(tinytex)
-#library(mapview)
 library(shinyjs)
 
 source("data_sources.R")
@@ -697,12 +696,16 @@ server <- function(input, output, session) {
         "Teilrenovierung mit mindestens 3 Maßnahmen: <strong>+6%</strong>"
       )
     }
-  })
+    # Pass the selected renovation details to the globals
+    globals$renovierung$selection <- input$renovierung_details
+    
+    })
   
   output$renovierung_factor <- renderText({
     globals$renovierung$info_text
   })
   
+
   
   
 # #----- Section 'sanitaer' -----
@@ -739,6 +742,9 @@ server <- function(input, output, session) {
       globals$sanitaer$info_text <- "An mind. drei Positionen verbesserte Sanitärausstattung: <strong>+6%</strong>" 
       
     }
+    # Pass the selected sanitär details to the globals
+    globals$sanitaer$selection <- input$sanitaer_details
+    
   })
   
   
@@ -764,6 +770,8 @@ server <- function(input, output, session) {
       globals$ausstattung$info_text <- "Bitte wählen Sie die Ausstattungsmerkmale aus."
       #shinyjs::hide("ausstattung_hint")
     }
+
+    
   })
   
   observeEvent(input$ausstattung_details, {
@@ -785,6 +793,8 @@ server <- function(input, output, session) {
         format_value(total_factor * 100, " %</strong>", add_plus = TRUE)
       )
     }
+    # Pass the selected ausstattung details to the globals
+    globals$ausstattung$selection <- input$ausstattung_details
   })
   
   output$ausstattung_factor <- renderText({
@@ -901,7 +911,7 @@ server <- function(input, output, session) {
   #
   output$downloadReport <- downloadHandler(
     filename = function() {
-      "Report.html"
+      "Report.pdf"
     },
     content = function(file) {
       rmarkdown::render(

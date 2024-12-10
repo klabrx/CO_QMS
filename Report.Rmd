@@ -1,6 +1,6 @@
 ---
 title: "App Globals Report"
-output: html_document
+output: pdf_document
 params:
   globals: NULL
 ---
@@ -14,46 +14,45 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Bestimmung der ortsüblichen Vergleichsmiete für Wohnraum auf der Grundlage folgender Angaben:
 
 ### Wohnungsgröße
-- **Auswahl:** `r params$globals$groesse$selection`
-- **Info Text:** `r params$globals$groesse$info_text`
-- **Untere Spannengrenze (ug):** `r params$globals$groesse$lo`
-- **Ortsübliche Vergleichsmiete (oue):** `r params$globals$groesse$mid`
-- **Obere Spannengrenze (og):** `r params$globals$groesse$hi`
+- Auswahl: `r params$globals$groesse$selection`
+- Info Text: `r params$globals$groesse$info_text`
+- Untere Spannengrenze (ug): `r params$globals$groesse$lo`
+- Ortsübliche Vergleichsmiete (oue): `r params$globals$groesse$mid`
+- Obere Spannengrenze (og): `r params$globals$groesse$hi`
 
 ---
 
 ### Wohnlage
-- **Adressauswahl:** `r params$globals$adresse$selection`
-- **Wohnlage somit:** `r params$globals$adresse$Lage`
-- **Faktor:** `r params$globals$adresse$factor`
+- Ergebnis: `r params$globals$adresse$info_text`
+- Basierend auf: `r params$globals$adresse$selection`
 
-### Lageplan
-
-```{r, echo=FALSE}
-if (!is.null(params$globals$adresse$map)) {
-  params$globals$adresse$map
-} else {
-  "No map available for the selected address."
-}
-```
-
----
 
 ### Baujahr
-- **Auswahl:** `r params$globals$baujahr$selection`
-- **Faktor:** `r params$globals$baujahr$factor`
-- **Info Text:** `r params$globals$baujahr$info_text`
+- Ergebnis: `r params$globals$baujahr$info_text`
+- Basierend auf: `r params$globals$baujahr$selection`
 
 ---
 
 ### Renovierung
-- **Auswahl:** `r paste(params$globals$renovation$selection, collapse = ", ")`
-- **Faktor:** `r params$globals$renovation$factor`
-- **Info Text:** `r params$globals$renovation$info_text`
+- Ergebnis: `r params$globals$renovierung$info_text`
+- Basierend auf: `r paste(params$globals$renovierung$selection, collapse = ", ")`
+
+---
+
+### Sanitär
+- Ergebnis: `r params$globals$sanitaer$info_text`
+- Basierend auf: `r paste(params$globals$sanitaer$selection, collapse = ", ")`
 
 ---
 
 ### Ausstattung
-- **Auswahl:** `r paste(params$globals$ausstattung$selection, collapse = ", ")`
-- **Faktor:** `r params$globals$ausstattung$factor`
-- **Info Text:** `r params$globals$ausstattung$info_text`
+- Ergebnis: `r params$globals$ausstattung$info_text`
+- Basierend auf: `r paste(params$globals$ausstattung$selection, collapse = ", ")`
+
+---
+
+### Gesamtfaktoren
+- Aggregierter Faktor: `r params$globals$sum$factor`
+- Info Text: `r params$globals$sum$info_text`
+
+```
