@@ -34,20 +34,56 @@ knitr::opts_chunk$set(echo = TRUE)
 ---
 
 ### Renovierung
-- Ergebnis: `r params$globals$renovierung$info_text`
-- Basierend auf: `r paste(params$globals$renovierung$selection, collapse = ", ")`
+- Ergebnis: `r params$globals$renovierung$info_text`, basierend auf:
+```{r renovierung_details, echo=FALSE, results='asis'}
+# Example: Assume params$globals$renovierung$selection contains the selected details
+if (!is.null(params$globals$renovierung$selection)) {
+  # Convert selections to a Markdown unordered list
+  formatted_list <- paste0("  - ", params$globals$renovierung$selection, collapse = "\n")
+  
+  # Output the list
+  cat(formatted_list)
+} else {
+  cat("Keine besondere Renovierung angegeben.")
+}
+```
 
 ---
 
 ### Sanitär
-- Ergebnis: `r params$globals$sanitaer$info_text`
-- Basierend auf: `r paste(params$globals$sanitaer$selection, collapse = ", ")`
+- Ergebnis: `r params$globals$sanitaer$info_text`, basierend auf:
+```{r sanitaer_details, echo=FALSE, results='asis'}
+# Example: Assume params$globals$sanitaer$selection contains the selected details
+
+if (!is.null(params$globals$sanitaer$selection)) {
+  # Convert selections to a Markdown unordered list
+  formatted_list <- paste0("  - ", params$globals$sanitaer$selection, collapse = "\n")
+  
+  # Output the list
+  cat(formatted_list)
+} else {
+  cat("Keine besondere Sanitärausstattung angegeben.")
+}
+```
 
 ---
 
 ### Ausstattung
-- Ergebnis: `r params$globals$ausstattung$info_text`
-- Basierend auf: `r paste(params$globals$ausstattung$selection, collapse = ", ")`
+- Ergebnis: `r params$globals$ausstattung$info_text`, basierend auf:
+```{r ausstattung_details, echo=FALSE, results='asis'}
+# Example: Assume params$globals$ausstattung$selection contains the selected details
+
+if (!is.null(params$globals$ausstattung$selection)) {
+  # Convert selections to a Markdown unordered list
+  formatted_list <- paste0("  - ", params$globals$ausstattung$selection, collapse = "\n")
+  
+  # Output the list
+  cat(formatted_list)
+} else {
+  cat("Keine besondere Ausstattung ausgewählt.")
+}
+```
+
 
 ---
 

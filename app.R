@@ -320,30 +320,36 @@ ui <- fluidPage(
           htmlOutput("sum_factors"), # Display globals$sum$info_text
           style = "font-weight: bold; text-align: center; margin-bottom: 10px;"
         ),
+        # Captions for the sub-columns
+        fluidRow(
+          column(width = 4, div("Untere Grenze", style = "text-align: center;")),
+          column(width = 4, div(HTML("<strong>Ortsüblich</strong>"), style = "text-align: center;")),
+          column(width = 4, div("Obere Grenze", style = "text-align: center;"))
+        ),
         # Bottom sub-row for the three sub-columns
         fluidRow(
           column(
             width = 4,
             div(
-              htmlOutput("lower_limit"), # Untere Grenze: groesse_result * sum_factor
+              htmlOutput("lower_limit", style = "text-align: center;"), # Untere Grenze: groesse_result * sum_factor
               br(),
-              htmlOutput("lower_limit_final") # Result * slider_value
+              htmlOutput("lower_limit_final", style = "text-align: center;") # Result * slider_value
             )
           ),
           column(
             width = 4,
             div(
-              htmlOutput("typical_value"), # Ortsüblich: groesse_result * sum_factor
+              htmlOutput("typical_value", style = "text-align: center; font-weight: bold;"), # Ortsüblich: groesse_result * sum_factor
               br(),
-              htmlOutput("typical_value_final") # Result * slider_value
+              htmlOutput("typical_value_final", style = "text-align: center; font-weight: bold;") # Result * slider_value
             )
           ),
           column(
             width = 4,
             div(
-              htmlOutput("upper_limit"), # Obere Grenze: groesse_result * sum_factor
+              htmlOutput("upper_limit", style = "text-align: center;"), # Obere Grenze: groesse_result * sum_factor
               br(),
-              htmlOutput("upper_limit_final") # Result * slider_value
+              htmlOutput("upper_limit_final", style = "text-align: center;") # Result * slider_value
             )
           )
         )
@@ -655,11 +661,14 @@ server <- function(input, output, session) {
   
   
   
-#----- Section 'renovierung' -----
+  #----- Section 'renovierung' -----
   observeEvent(input$renovierung_main, {
     if (input$renovierung_main == "Keine Sanierung/Renovierung bekannt") {
+      # Reset details and set globals
+      updateCheckboxGroupInput(session, "renovierung_details", selected = character(0))
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- "Keine Renovierung bekannt: <strong>0%</strong>."
+      globals$renovierung$selection <- NULL
     } else if (input$renovierung_main == "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)") {
       if (input$baujahr >= "1990") {
         # Notify user about invalid selection and reset dropdown
@@ -667,64 +676,68 @@ server <- function(input, output, session) {
         updateSelectInput(session, "renovierung_main", selected = "") # Reset to empty
         globals$renovierung$factor <- 0
         globals$renovierung$info_text <- "" # Reflect incomplete state
+        globals$renovierung$selection <- NULL
       } else {
+        # Valid Vollmodernisierung selection
+        updateCheckboxGroupInput(session, "renovierung_details", selected = character(0))
         globals$renovierung$factor <- 0.11
         globals$renovierung$info_text <- "Vollmodernisierung: <strong>+11%</strong>."
+        globals$renovierung$selection <- "Vollmodernisierung"
       }
     } else if (input$renovierung_main == "Teilrenovierung") {
       # Teilrenovierung: Reset factor and wait for details
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- "Bitte wählen Sie die durchgeführten Maßnahmen aus."
+      globals$renovierung$selection <- NULL
     } else {
       # Handle empty or invalid input
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- ""
+      globals$renovierung$selection <- NULL
     }
   })
-  
   
   observeEvent(input$renovierung_details, {
     if (is.null(input$renovierung_details) || length(input$renovierung_details) < 3) {
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- paste0(length(input$renovierung_details),
                                               " von mind. 3 für einen 6%-Zuschlag ",
-                                              "erforderlichen Maßnahmen: <strong>",
-                                              "+-0%</strong>")
+                                              "erforderlichen Maßnahmen: <strong>+-0%</strong>")
     } else {
       globals$renovierung$factor <- 0.06
-      globals$renovierung$info_text <- paste(
-        "Teilrenovierung mit mindestens 3 Maßnahmen: <strong>+6%</strong>"
-      )
+      globals$renovierung$info_text <- "Teilrenovierung mit mindestens 3 Maßnahmen: <strong>+6%</strong>"
     }
     # Pass the selected renovation details to the globals
     globals$renovierung$selection <- input$renovierung_details
-    
-    })
+  })
   
   output$renovierung_factor <- renderText({
     globals$renovierung$info_text
   })
   
+  
 
   
   
-# #----- Section 'sanitaer' -----
+  #----- Section 'sanitaer' -----
   observeEvent(input$sanitaer_main, {
     if (is.null(input$sanitaer_main) || input$sanitaer_main == "") {
       # No selection: Reset globals
+      updateCheckboxGroupInput(session, "sanitaer_details", selected = character(0))
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- ""
-      #shinyjs::show("sanitaer_hint")
+      globals$sanitaer$selection <- NULL
     } else if (input$sanitaer_main == "Keine besondere Sanitärausstattung") {
-      # Finalize with 0% for "Keine"
+      # Reset details and finalize with 0% for "Keine"
+      updateCheckboxGroupInput(session, "sanitaer_details", selected = character(0))
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- "Keine besondere Sanitärausstattung: <strong>+-0%</strong>."
-      #shinyjs::hide("sanitaer_hint")
+      globals$sanitaer$selection <- NULL
     } else if (input$sanitaer_main == "Verbesserte Sanitärausstattung") {
-      # Show detailed options for "Verbesserte"
+      # Reset factor and wait for details
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- "Bitte wählen Sie die Verbesserungen aus."
-      #shinyjs::hide("sanitaer_hint")
+      globals$sanitaer$selection <- NULL
     }
   })
   
@@ -734,44 +747,41 @@ server <- function(input, output, session) {
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- paste0(length(input$sanitaer_details),
                                            " von mind. 3 für einen 6%-Zuschlag ",
-                                           "erforderlichen Verbesserungen: <strong>",
-                                           "+-0%</strong>")
+                                           "erforderlichen Verbesserungen: <strong>+-0%</strong>")
     } else {
       # At least 3 selections
       globals$sanitaer$factor <- 0.06
-      globals$sanitaer$info_text <- "An mind. drei Positionen verbesserte Sanitärausstattung: <strong>+6%</strong>" 
-      
+      globals$sanitaer$info_text <- "An mind. drei Positionen verbesserte Sanitärausstattung: <strong>+6%</strong>"
     }
     # Pass the selected sanitär details to the globals
     globals$sanitaer$selection <- input$sanitaer_details
-    
   })
-  
   
   output$sanitaer_factor <- renderText({
     globals$sanitaer$info_text
   })
+  
     
-# #----- Section 'ausstattung' -----
+  #----- Section 'ausstattung' -----
   observeEvent(input$ausstattung_main, {
     if (is.null(input$ausstattung_main) || input$ausstattung_main == "") {
       # No selection: Reset globals
+      updateCheckboxGroupInput(session, "ausstattung_details", selected = character(0))
       globals$ausstattung$factor <- 0
       globals$ausstattung$info_text <- ""
-      #shinyjs::show("ausstattung_hint")
+      globals$ausstattung$selection <- NULL
     } else if (input$ausstattung_main == "Keine besondere Ausstattung") {
-      # Finalize with 0% for "Keine"
+      # Reset details and finalize with 0% for "Keine"
+      updateCheckboxGroupInput(session, "ausstattung_details", selected = character(0))
       globals$ausstattung$factor <- 0
       globals$ausstattung$info_text <- "Keine besondere Ausstattung: <strong>0%</strong>."
-      #shinyjs::hide("ausstattung_hint")
+      globals$ausstattung$selection <- NULL
     } else if (input$ausstattung_main == "Besonderheiten in der Ausstattung") {
-      # Wait for detailed options
+      # Reset factor and wait for details
       globals$ausstattung$factor <- 0
       globals$ausstattung$info_text <- "Bitte wählen Sie die Ausstattungsmerkmale aus."
-      #shinyjs::hide("ausstattung_hint")
+      globals$ausstattung$selection <- NULL
     }
-
-    
   })
   
   observeEvent(input$ausstattung_details, {
@@ -779,6 +789,7 @@ server <- function(input, output, session) {
       # No selections
       globals$ausstattung$factor <- 0
       globals$ausstattung$info_text <- "Für die Ausstattung wurden keine Besonderheiten ausgewählt."
+      globals$ausstattung$selection <- NULL
     } else {
       # Calculate the total factor based on selected options
       selected_factors <- ref_ausstattung %>%
@@ -792,14 +803,14 @@ server <- function(input, output, session) {
         length(input$ausstattung_details), " Merkmal(en): <strong>",
         format_value(total_factor * 100, " %</strong>", add_plus = TRUE)
       )
+      globals$ausstattung$selection <- input$ausstattung_details
     }
-    # Pass the selected ausstattung details to the globals
-    globals$ausstattung$selection <- input$ausstattung_details
   })
   
   output$ausstattung_factor <- renderText({
     globals$ausstattung$info_text
   })
+  
   
   #------ Section 'zusammenfassung' ------
   
