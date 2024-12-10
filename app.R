@@ -347,6 +347,19 @@ ui <- fluidPage(
           )
         )
       )
+    ),
+    fluidRow(
+      class = "framed-row",
+      id = "report_row", # Unique ID for styling
+      column(
+        width = 12,
+        # Button for downloading the report
+        downloadButton(
+          outputId = "downloadReport",
+          label = "Bericht herunterladen", # Button label
+          class = "btn-primary" # Optional styling
+        )
+      )
     )
     
     
@@ -878,29 +891,29 @@ server <- function(input, output, session) {
   
   
 
-#   #----- Render Report -----
-#   # Render the report as a downloadable HTML file, using the globals to pass the
-#   # necessary information to the report. The report is rendered using the
-#   # rmarkdown::render function, which takes the input file (report.Rmd) and
-#   # the output file (report.html) as arguments. The globals are passed to the
-#   # report using the params argument, which is a list of named parameters.
-#   # The report will be rendered when the download button is clicked.
-#   # 
-#   output$downloadReport <- downloadHandler(
-#     filename = function() {
-#       "report.html"
-#     },
-#     content = function(file) {
-#       rmarkdown::render(
-#         input = "report.Rmd",
-#         output_file = file,
-#         params = list(globals = reactiveValuesToList(globals)),  # Pass globals
-#         envir = new.env(parent = globalenv())  # Use an isolated environment
-#       )
-#     }
-#   )
-#   
-#   
+  #----- Render Report -----
+  # Render the report as a downloadable HTML file, using the globals to pass the
+  # necessary information to the report. The report is rendered using the
+  # rmarkdown::render function, which takes the input file (report.Rmd) and
+  # the output file (report.html) as arguments. The globals are passed to the
+  # report using the params argument, which is a list of named parameters.
+  # The report will be rendered when the download button is clicked.
+  #
+  output$downloadReport <- downloadHandler(
+    filename = function() {
+      "Report.html"
+    },
+    content = function(file) {
+      rmarkdown::render(
+        input = "Report.Rmd",
+        output_file = file,
+        params = list(globals = reactiveValuesToList(globals)),  # Pass globals
+        envir = new.env(parent = globalenv())  # Use an isolated environment
+      )
+    }
+  )
+
+
 
 }
 shinyApp(ui = ui, server = server)
