@@ -64,7 +64,7 @@ ui <- fluidPage(
       column(
         width = 2, br(),
         div(
-          HTML("<strong>Untere Grenze</strong>"),
+          HTML("Untere Grenze"),
           htmlOutput("groesse_ug")
         )
       ),
@@ -72,13 +72,16 @@ ui <- fluidPage(
         width = 2, br(),
         div(
           HTML("<strong>Ortsüblich</strong>"),
-          htmlOutput("groesse_oue")
+          div(
+            htmlOutput("groesse_oue", inline = TRUE), # Allow inline HTML
+            style = "font-weight: bold;"             # Bold styling
+          )
         )
       ),
       column(
         width = 2, br(),
         div(
-          HTML("<strong>Obere Grenze</strong>"),
+          HTML("Obere Grenze"),
           htmlOutput("groesse_og")
         )
       )
@@ -124,11 +127,10 @@ ui <- fluidPage(
             div(
               id = "adresse_hint",
               "Bitte geben Sie die gesuchte Adresse in das ",
-              "Suchfeld ein. Auf der Grundlage der Adresse wird die Wohnlage ",
-              "betimmt (A, B, oder C). A ist die Referenzlage (+-0%), B ", 
-              "berursacht einen Abschlag von -7% und C einen von -10%. Auch ",
-              "Adressbestandteile werden im Eingabefeld erkannt, z.B. führt ",
-              "Sie die Eingabe 'inn 76' direkt zur Innstraße 76."
+              "Suchfeld ein. Diese Adresse bestimmt die Wohnlage ",
+              "A (+-0%), B (-7%) oder C (-10%). Auch Teileingaben ",
+              "werden erkannt, z.B. führt die Angabe 'inn 76' ",
+              "direkt zur Innstraße 76."
             ),
             leafletOutput("adresse_map", height = "200px") # Map
           )
@@ -433,15 +435,7 @@ server <- function(input, output, session) {
     )
   )
   
-  
-  
-  
-  
-  # updateSelectInput(
-  #   session,
-  #   "renovierung_main",
-  #   selected = ""
-  # )
+
   
   
   
@@ -666,7 +660,7 @@ server <- function(input, output, session) {
   observeEvent(input$renovierung_main, {
     if (input$renovierung_main == "Keine Sanierung/Renovierung bekannt") {
       globals$renovierung$factor <- 0
-      globals$renovierung$info_text <- "Keine Renovierung bekannt: 0%."
+      globals$renovierung$info_text <- "Keine Renovierung bekannt: <strong>0%</strong>."
     } else if (input$renovierung_main == "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)") {
       if (input$baujahr >= "1990") {
         # Notify user about invalid selection and reset dropdown
@@ -676,7 +670,7 @@ server <- function(input, output, session) {
         globals$renovierung$info_text <- "" # Reflect incomplete state
       } else {
         globals$renovierung$factor <- 0.11
-        globals$renovierung$info_text <- "Vollmodernisierung: +11%."
+        globals$renovierung$info_text <- "Vollmodernisierung: <strong>+11%</strong>."
       }
     } else if (input$renovierung_main == "Teilrenovierung") {
       # Teilrenovierung: Reset factor and wait for details
@@ -693,11 +687,14 @@ server <- function(input, output, session) {
   observeEvent(input$renovierung_details, {
     if (is.null(input$renovierung_details) || length(input$renovierung_details) < 3) {
       globals$renovierung$factor <- 0
-      globals$renovierung$info_text <- "Für +6% sind mindestens drei Maßnahmen erforderlich."
+      globals$renovierung$info_text <- paste0(length(input$renovierung_details),
+                                              " von mind. 3 für einen 6%-Zuschlag ",
+                                              "erforderlichen Maßnahmen: <strong>",
+                                              "+-0%</strong>")
     } else {
       globals$renovierung$factor <- 0.06
       globals$renovierung$info_text <- paste(
-        "Teilrenovierung: +6% (", length(input$renovierung_details), " Maßnahmen ausgewählt)"
+        "Teilrenovierung mit mindestens 3 Maßnahmen: <strong>+6%</strong>"
       )
     }
   })
@@ -718,7 +715,7 @@ server <- function(input, output, session) {
     } else if (input$sanitaer_main == "Keine besondere Sanitärausstattung") {
       # Finalize with 0% for "Keine"
       globals$sanitaer$factor <- 0
-      globals$sanitaer$info_text <- "Keine besondere Sanitärausstattung: 0%."
+      globals$sanitaer$info_text <- "Keine besondere Sanitärausstattung: <strong>+-0%</strong>."
       #shinyjs::hide("sanitaer_hint")
     } else if (input$sanitaer_main == "Verbesserte Sanitärausstattung") {
       # Show detailed options for "Verbesserte"
@@ -732,13 +729,15 @@ server <- function(input, output, session) {
     if (is.null(input$sanitaer_details) || length(input$sanitaer_details) < 3) {
       # Fewer than 3 valid selections
       globals$sanitaer$factor <- 0
-      globals$sanitaer$info_text <- "Für +6% sind mindestens drei Angaben erforderlich."
+      globals$sanitaer$info_text <- paste0(length(input$sanitaer_details),
+                                           " von mind. 3 für einen 6%-Zuschlag ",
+                                           "erforderlichen Verbesserungen: <strong>",
+                                           "+-0%</strong>")
     } else {
       # At least 3 selections
       globals$sanitaer$factor <- 0.06
-      globals$sanitaer$info_text <- paste(
-        "Verbesserte Sanitärausstattung: +6% (", length(input$sanitaer_details), " Maßnahmen ausgewählt)"
-      )
+      globals$sanitaer$info_text <- "An mind. drei Positionen verbesserte Sanitärausstattung: <strong>+6%</strong>" 
+      
     }
   })
   
@@ -757,7 +756,7 @@ server <- function(input, output, session) {
     } else if (input$ausstattung_main == "Keine besondere Ausstattung") {
       # Finalize with 0% for "Keine"
       globals$ausstattung$factor <- 0
-      globals$ausstattung$info_text <- "Keine besondere Ausstattung: 0%."
+      globals$ausstattung$info_text <- "Keine besondere Ausstattung: <strong>0%</strong>."
       #shinyjs::hide("ausstattung_hint")
     } else if (input$ausstattung_main == "Besonderheiten in der Ausstattung") {
       # Wait for detailed options
@@ -781,8 +780,9 @@ server <- function(input, output, session) {
       total_factor <- sum(selected_factors, na.rm = TRUE)
       globals$ausstattung$factor <- total_factor
       globals$ausstattung$info_text <- paste0(
-        "Ausstattungsfaktor: ", format_value(total_factor * 100, " %", add_plus = TRUE),
-        " (", length(input$ausstattung_details), " Merkmale ausgewählt)"
+        "Anpassungsfaktor bei einer Auswahl von ",
+        length(input$ausstattung_details), " Merkmal(en): <strong>",
+        format_value(total_factor * 100, " %</strong>", add_plus = TRUE)
       )
     }
   })
@@ -810,7 +810,7 @@ server <- function(input, output, session) {
     globals$sum$factor <- sum_factors
     
     # Debugging: Print the sum of factors
-    print(paste("Aggregated sum factor:", sum_factors))
+    # print(paste("Aggregated sum factor:", sum_factors))
     
     globals$sum$info_text <- paste(
       "Summe der Faktoren:",
@@ -829,7 +829,7 @@ server <- function(input, output, session) {
     req(globals$groesse$lo, globals$sum$factor)
     
     # Debugging: Print inputs
-    print(paste("Lower limit inputs:", globals$groesse$lo, globals$sum$factor))
+    # print(paste("Lower limit inputs:", globals$groesse$lo, globals$sum$factor))
     
     adjusted_lo <- globals$groesse$lo * (1 + globals$sum$factor)
     format_value(adjusted_lo, " €/m²")
@@ -839,7 +839,7 @@ server <- function(input, output, session) {
     req(globals$groesse$mid, globals$sum$factor)
     
     # Debugging: Print inputs
-    print(paste("Typical value inputs:", globals$groesse$mid, globals$sum$factor))
+    # print(paste("Typical value inputs:", globals$groesse$mid, globals$sum$factor))
     
     adjusted_mid <- globals$groesse$mid * (1 + globals$sum$factor)
     format_value(adjusted_mid, " €/m²")
@@ -849,7 +849,7 @@ server <- function(input, output, session) {
     req(globals$groesse$hi, globals$sum$factor)
     
     # Debugging: Print inputs
-    print(paste("Upper limit inputs:", globals$groesse$hi, globals$sum$factor))
+    # print(paste("Upper limit inputs:", globals$groesse$hi, globals$sum$factor))
     
     adjusted_hi <- globals$groesse$hi * (1 + globals$sum$factor)
     format_value(adjusted_hi, " €/m²")
@@ -860,7 +860,7 @@ server <- function(input, output, session) {
     req(globals$groesse$lo, globals$sum$factor, input$slider_groesse)
     
     # Debugging: Print inputs
-    print(paste("Final lower limit inputs:", globals$groesse$lo, globals$sum$factor, input$slider_groesse))
+    # print(paste("Final lower limit inputs:", globals$groesse$lo, globals$sum$factor, input$slider_groesse))
     
     final_lo <- globals$groesse$lo * (1 + globals$sum$factor) * input$slider_groesse
     format_value(final_lo, " €")
@@ -870,7 +870,7 @@ server <- function(input, output, session) {
     req(globals$groesse$mid, globals$sum$factor, input$slider_groesse)
     
     # Debugging: Print inputs
-    print(paste("Final typical value inputs:", globals$groesse$mid, globals$sum$factor, input$slider_groesse))
+    # print(paste("Final typical value inputs:", globals$groesse$mid, globals$sum$factor, input$slider_groesse))
     
     final_mid <- globals$groesse$mid * (1 + globals$sum$factor) * input$slider_groesse
     format_value(final_mid, " €")
@@ -880,7 +880,7 @@ server <- function(input, output, session) {
     req(globals$groesse$hi, globals$sum$factor, input$slider_groesse)
     
     # Debugging: Print inputs
-    print(paste("Final upper limit inputs:", globals$groesse$hi, globals$sum$factor, input$slider_groesse))
+    # print(paste("Final upper limit inputs:", globals$groesse$hi, globals$sum$factor, input$slider_groesse))
     
     final_hi <- globals$groesse$hi * (1 + globals$sum$factor) * input$slider_groesse
     format_value(final_hi, " €")
