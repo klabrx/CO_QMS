@@ -655,6 +655,7 @@ server <- function(input, output, session) {
   
   
   
+  
   output$baujahr_factor <- renderText({
     globals$baujahr$info_text
   })

@@ -1,5 +1,6 @@
 ---
-title: "App Globals Report"
+title: "Berechnung einer ortsüblichen Vergleichsmiete nach dem qualifizierten Mietspiegel der Stadt Passau, gültig ab November 2024"
+date: "`r format(Sys.Date(), '%d.%m.%Y')`"
 output: pdf_document
 params:
   globals: NULL
@@ -9,7 +10,11 @@ params:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Mietspiegel der Stadt Passau, gültig ab November 2024
+
+# Grundlagen der Berechnung
+- Die Berechnung erfolgt auf der Grundlage eines vom EMA-Institut in Regensburg erstellten Mietspiegelmodells für die Stadt Passau, gültig ab November 2024.
+- Das Modell wurde in Absprache mit dem Arbeitskreis Mietspiegel entwickelt und basiert auf einer repräsentativen Datenerhebung aus 2024.
+- Der Mietspiegel wurde sowohl von der Stadt Passau wie auch von den örtlichen Mieter- und Vermieterverbänden (Mieterverein Passau e.V. sowie Haus- und Grundbesitzerverein Passau e.V.) anerkannt ung gilt somit als qualifiziert.
 
 ## Bestimmung der ortsüblichen Vergleichsmiete für Wohnraum auf der Grundlage folgender Angaben:
 
