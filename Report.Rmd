@@ -1,7 +1,15 @@
 ---
 title: "Berechnung einer ortsüblichen Vergleichsmiete nach dem qualifizierten Mietspiegel der Stadt Passau, gültig ab November 2024"
 date: "`r format(Sys.Date(), '%d.%m.%Y')`"
-output: pdf_document
+output:
+  pdf_document:
+    keep_tex: true
+    number_sections: false
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{array}
+  - \usepackage{booktabs}
+  - \renewcommand{\arraystretch}{1.3} % Adjust row height
 params:
   globals: NULL
 ---
@@ -9,6 +17,42 @@ params:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+```{r, echo=FALSE, results='asis'}
+library(knitr)
+
+# Prepare data
+details <- data.frame(
+  Beschreibung = c(
+    "Vergleichsmiete (EUR/m²)",
+    "Gesamtbetrag (EUR)"
+  ),
+  Von = c(
+    format(round(params$globals$groesse$lo * (1 + params$globals$sum$factor), 2), nsmall = 2, decimal.mark = ","),
+    format(round(params$globals$groesse$lo * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, decimal.mark = ",")
+  ),
+  Ortsüblich = c(
+    format(round(params$globals$groesse$mid * (1 + params$globals$sum$factor), 2), nsmall = 2, decimal.mark = ","),
+    format(round(params$globals$groesse$mid * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, decimal.mark = ",")
+  ),
+  Bis = c(
+    format(round(params$globals$groesse$hi * (1 + params$globals$sum$factor), 2), nsmall = 2, decimal.mark = ","),
+    format(round(params$globals$groesse$hi * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, decimal.mark = ",")
+  )
+)
+
+# Render table
+kable(details, "latex", booktabs = TRUE, align = "lccc", 
+      col.names = c("Beschreibung", "Von", "Ortsüblich", "Bis")) %>%
+  kable_styling(latex_options = c( "scale_down")) %>%
+  add_header_above(c(" " = 1, "Ortsübliche Spanne" = 3))
+
+
+```
+
+
+
+
+
 
 
 # Grundlagen der Berechnung

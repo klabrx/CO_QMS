@@ -9,6 +9,7 @@ library(shinyjs)
 library(markdown)
 library(tinytex)
 library(shinyjs)
+library(kableExtra)
 
 source("data_sources.R")
 source("functions.R")
@@ -386,7 +387,8 @@ server <- function(input, output, session) {
       info_text = "",  # Informational text for display
       lo = NA_real_,     # Lower range value
       mid = NA_real_,    # Midpoint value
-      hi = NA_real_      # Upper range value
+      hi = NA_real_,      # Upper range value
+      detail = NA_real_  # Slider detail value
     ),
     
     # Section: Adresse
@@ -479,7 +481,10 @@ server <- function(input, output, session) {
     }
   })
   
-  
+  # Observe the slider input and update the globals accordingly
+  observeEvent(input$slider_groesse, {
+    globals$groesse$detail <- input$slider_groesse
+  })
   
   # Render all groesse outputs based on globals
   output$groesse_info <- renderText({
