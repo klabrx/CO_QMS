@@ -928,7 +928,7 @@ server <- function(input, output, session) {
   #
   output$downloadReport <- downloadHandler(
     filename = function() {
-      "Report.pdf"
+      "Mietspiegel_Berechnungsprotokoll.pdf"
     },
     content = function(file) {
       rmarkdown::render(

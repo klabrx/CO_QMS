@@ -1,6 +1,5 @@
 ---
 title: "Berechnung einer ortsüblichen Vergleichsmiete nach dem qualifizierten Mietspiegel der Stadt Passau, gültig ab November 2024"
-date: "`r format(Sys.Date(), '%d.%m.%Y')`"
 output:
   pdf_document:
     keep_tex: true
@@ -10,85 +9,116 @@ header-includes:
   - \usepackage{array}
   - \usepackage{booktabs}
   - \renewcommand{\arraystretch}{1.3} % Adjust row height
+  - \usepackage{setspace}
+  - \usepackage{anyfontsize}
+  - \fontsize{12}{15}\selectfont
 params:
   globals: NULL
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 ```
+
+```{r}
+# Use easy-to-read names for the parameters
+  gro <- params$globals$groesse$selection
+  adr <- params$globals$adresse$selection
+  lage <- params$globals$adresse$Lage 
+  bjr <- params$globals$baujahr$selection
+  ren <- params$globals$renovierung$selection
+  san <- params$globals$sanitaer$selection
+  ast <- params$globals$ausstattung$selection
+  ugr <- params$globals$groesse$lo
+  oue <- params$globals$groesse$mid
+  ogr <- params$globals$groesse$hi
+  sum <- params$globals$sum$factor
+  adr_factor <- params$globals$adresse$factor
+  bjr_factor <- params$globals$baujahr$factor
+  ren_factor <- params$globals$renovierung$factor
+  san_factor <- params$globals$sanitaer$factor
+  ast_factor <- params$globals$ausstattung$factor
+  gro_info <- params$globals$groesse$info_text
+  adr_info <- params$globals$adresse$info_text
+  bjr_info <- params$globals$baujahr$info_text
+  ren_info <- params$globals$renovierung$info_text
+  san_info <- params$globals$sanitaer$info_text
+  ast_info <- params$globals$ausstattung$info_text
+  sum_info <- params$globals$sum$info_text
+  sld <- params$globals$groesse$detail
+  
+  # Provide a function that round a number to two decimals, uses "." as big.mark, "," as decimal mark and displays two decimals
+  # This function is used to format the numbers in the report
+  pn <- function(x) { # pn for "prettynum"
+    format(round(x, 2), big.mark = ".", decimal.mark = ",", nsmall = 2)
+  }
+  
+  # Provide a function that turns a number into a percentage
+  # This function is used to format the percentage values in the report
+  # The function multiplies the input by 100, rounds it to two decimals, and adds a "%" sign
+  # positive values are prefixed with a "+", negative values are prefixed with a "-"
+  # 0-values are returned as "±0%"
+  
+  pp <- function(x) { # pp for "prettypercent"
+    if (x > 0) {
+      return(paste0(" Zuschlag +", format(round(x * 100, 2), nsmall = 2), "%"))
+    } else if (x < 0) {
+      return(paste0("Abschlag ", format(round(x * 100, 2), nsmall = 2), "%"))
+    } else {
+      return("Kein Zu-/Abschlag (±0%)")
+    }
+  }
+```
+### Erstellt am `r format(Sys.Date(), '%d.%m.%Y')` mit dem Mietspiegelrechner der Stadt Passau
+
+## Adresse/Wohnlage des Objekts: `r paste0(adr, ", Wohnlage ", lage)`
+
 ```{r, echo=FALSE, results='asis'}
 library(knitr)
 
 # Prepare data
 details <- data.frame(
   Beschreibung = c(
-    "Vergleichsmiete (EUR/m²)",
-    "Gesamtbetrag (EUR)"
+    "Ortsübliche Vergleichsmiete (€/m²)",
+    paste0("Gesamte Nettokaltmiete für ", sld, " m²  (€)")
   ),
   Von = c(
-    format(round(params$globals$groesse$lo * (1 + params$globals$sum$factor), 2), nsmall = 2, decimal.mark = ","),
-    format(round(params$globals$groesse$lo * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, decimal.mark = ",")
+    format(round(params$globals$groesse$lo * (1 + params$globals$sum$factor), 2), nsmall = 2, big.mark =".", decimal.mark = ","),
+    format(round(params$globals$groesse$lo * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, big.mark =".",  decimal.mark = ",")
   ),
   Ortsüblich = c(
-    format(round(params$globals$groesse$mid * (1 + params$globals$sum$factor), 2), nsmall = 2, decimal.mark = ","),
-    format(round(params$globals$groesse$mid * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, decimal.mark = ",")
+    format(round(params$globals$groesse$mid * (1 + params$globals$sum$factor), 2), nsmall = 2, big.mark =".", decimal.mark = ","),
+    format(round(params$globals$groesse$mid * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, big.mark =".", decimal.mark = ",")
   ),
   Bis = c(
-    format(round(params$globals$groesse$hi * (1 + params$globals$sum$factor), 2), nsmall = 2, decimal.mark = ","),
-    format(round(params$globals$groesse$hi * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, decimal.mark = ",")
+    format(round(params$globals$groesse$hi * (1 + params$globals$sum$factor), 2), nsmall = 2, big.mark =".", decimal.mark = ","),
+    format(round(params$globals$groesse$hi * (1 + params$globals$sum$factor) * params$globals$groesse$detail, 2), nsmall = 2, big.mark =".", decimal.mark = ",")
   )
 )
 
 # Render table
 kable(details, "latex", booktabs = TRUE, align = "lccc", 
-      col.names = c("Beschreibung", "Von", "Ortsüblich", "Bis")) %>%
-  kable_styling(latex_options = c( "scale_down")) %>%
+      col.names = c("Ergebnis für ...", "Von", "Ortsüblich", "Bis")) %>%
+  kable_styling(latex_options = c( "hold_position", position = "left")) %>%
   add_header_above(c(" " = 1, "Ortsübliche Spanne" = 3))
 
 
 ```
 
+### Hinweise zur Berechnung
+Aufbauend auf der eingegebenen Größe der Wohnung von `r sld` m² ergibt sich ein Basiswert von `r pn(oue)` €/m² mit einem Spannenbereich von `r pn(ugr)` - `r pn(ogr)` €/m². Diese Werte werden durch prozentuale Zu-/Abschläge für Lage, Baujahr, Renovierung-/Sanierungszustand, Sanitärausstattung und allgemeine Ausstattung angepasst und ergeben die ortsübliche Vergleichsmiete in €/m². Die Gesamtmiete für die Wohnung ergibt sich aus dieser m²-Miete multipliziert mit der Wohnungsgröße.
 
 
-
-
-
-
-# Grundlagen der Berechnung
-- Die Berechnung erfolgt auf der Grundlage eines vom EMA-Institut in Regensburg erstellten Mietspiegelmodells für die Stadt Passau, gültig ab November 2024.
-- Das Modell wurde in Absprache mit dem Arbeitskreis Mietspiegel entwickelt und basiert auf einer repräsentativen Datenerhebung aus 2024.
-- Der Mietspiegel wurde sowohl von der Stadt Passau wie auch von den örtlichen Mieter- und Vermieterverbänden (Mieterverein Passau e.V. sowie Haus- und Grundbesitzerverein Passau e.V.) anerkannt ung gilt somit als qualifiziert.
-
-## Bestimmung der ortsüblichen Vergleichsmiete für Wohnraum auf der Grundlage folgender Angaben:
-
-### Wohnungsgröße
-- Auswahl: `r params$globals$groesse$selection`
-- Info Text: `r params$globals$groesse$info_text`
-- Untere Spannengrenze (ug): `r params$globals$groesse$lo`
-- Ortsübliche Vergleichsmiete (oue): `r params$globals$groesse$mid`
-- Obere Spannengrenze (og): `r params$globals$groesse$hi`
-
----
-
-### Wohnlage
-- Ergebnis: `r params$globals$adresse$info_text`
-- Basierend auf: `r params$globals$adresse$selection`
-
-
-### Baujahr
-- Ergebnis: `r params$globals$baujahr$info_text`
-- Basierend auf: `r params$globals$baujahr$selection`
-
----
-
-### Renovierung
-- Ergebnis: `r params$globals$renovierung$info_text`, basierend auf:
-```{r renovierung_details, echo=FALSE, results='asis'}
+### Berücksichtigte Angaben
+-  Größe der Wohnung: `r sld` m², Größenbereich somit `r gro`, Basiswert: `r pn(oue)` €/m²
+-  Adresse: `r adr`, Wohnlage: `r lage`, `r pp(adr_factor)`
+-  Baujahr (Bereich):  `r bjr`, `r pp(bjr_factor)`
+-  Renovierung/Sanierung: `r ren_info`
+```{r, echo=FALSE, results='asis'}
 # Example: Assume params$globals$renovierung$selection contains the selected details
 if (!is.null(params$globals$renovierung$selection)) {
   # Convert selections to a Markdown unordered list
-  formatted_list <- paste0("  - ", params$globals$renovierung$selection, collapse = "\n")
+  formatted_list <- paste0("    - ", params$globals$renovierung$selection, collapse = "\n")
   
   # Output the list
   cat(formatted_list)
@@ -96,17 +126,12 @@ if (!is.null(params$globals$renovierung$selection)) {
   cat("Keine besondere Renovierung angegeben.")
 }
 ```
-
----
-
-### Sanitär
-- Ergebnis: `r params$globals$sanitaer$info_text`, basierend auf:
-```{r sanitaer_details, echo=FALSE, results='asis'}
+-  Sanitärausstattung: `r san_info`
+```{r, echo=FALSE, results='asis'}
 # Example: Assume params$globals$sanitaer$selection contains the selected details
-
 if (!is.null(params$globals$sanitaer$selection)) {
   # Convert selections to a Markdown unordered list
-  formatted_list <- paste0("  - ", params$globals$sanitaer$selection, collapse = "\n")
+  formatted_list <- paste0("    - ", params$globals$sanitaer$selection, collapse = "\n")
   
   # Output the list
   cat(formatted_list)
@@ -114,17 +139,12 @@ if (!is.null(params$globals$sanitaer$selection)) {
   cat("Keine besondere Sanitärausstattung angegeben.")
 }
 ```
-
----
-
-### Ausstattung
-- Ergebnis: `r params$globals$ausstattung$info_text`, basierend auf:
-```{r ausstattung_details, echo=FALSE, results='asis'}
+-  Ausstattung: `r ast_info`
+```{r, echo=FALSE, results='asis'}
 # Example: Assume params$globals$ausstattung$selection contains the selected details
-
 if (!is.null(params$globals$ausstattung$selection)) {
   # Convert selections to a Markdown unordered list
-  formatted_list <- paste0("  - ", params$globals$ausstattung$selection, collapse = "\n")
+  formatted_list <- paste0("    - ", params$globals$ausstattung$selection, collapse = "\n")
   
   # Output the list
   cat(formatted_list)
@@ -133,11 +153,4 @@ if (!is.null(params$globals$ausstattung$selection)) {
 }
 ```
 
-
----
-
-### Gesamtfaktoren
-- Aggregierter Faktor: `r params$globals$sum$factor`
-- Info Text: `r params$globals$sum$info_text`
-
-```
+### Summe aller Zu-/Abschläge somit: `r pp(sum)`
