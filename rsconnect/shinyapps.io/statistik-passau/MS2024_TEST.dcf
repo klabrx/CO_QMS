@@ -5,10 +5,10 @@ account: statistik-passau
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 13579397
-bundleId: 9504703
+bundleId: 9507660
 url: https://statistik-passau.shinyapps.io/MS2024_TEST/
-when: 1733944569.08924
-lastSyncTime: 1733944569.08925
+when: 1733980773.05677
+lastSyncTime: 1733980773.05678
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: Report.html|Report.pdf|scripts/define_options.R|scripts/load_data.R|scripts/prepApp.R|scripts/prepRef.R|scripts/scripts.md|src/src.md

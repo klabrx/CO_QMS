@@ -1,10 +1,13 @@
 ---
-title: "Berechnung einer ortsüblichen Vergleichsmiete nach dem qualifizierten Mietspiegel der Stadt Passau, gültig ab November 2024"
 output:
   pdf_document:
     keep_tex: true
     number_sections: false
 header-includes:
+  - \usepackage{wrapfig}
+  - \usepackage{graphicx}
+  - \usepackage{float}
+  - \usepackage[margin=1in]{geometry}
   - \usepackage{booktabs}
   - \usepackage{array}
   - \usepackage{booktabs}
@@ -12,9 +15,28 @@ header-includes:
   - \usepackage{setspace}
   - \usepackage{anyfontsize}
   - \fontsize{12}{15}\selectfont
+  - \usepackage{graphicx}
+  - \usepackage{float}
+  - \usepackage[margin=1in]{geometry}
 params:
   globals: NULL
 ---
+
+```{r, echo=FALSE, results='asis'}
+cat("
+\\begin{wrapfigure}{r}{0.2\\textwidth} % Wrap figure on the right, 20% width
+  \\includegraphics[width=0.2\\textwidth]{logo.png}
+\\end{wrapfigure}
+
+\\noindent
+\\textbf{\\LARGE Ortsübliche Vergleichsmiete nach dem} \\
+\\textbf{\\LARGE qualifizierten Mietspiegel der Stadt Passau,} \\
+\\textbf{\\LARGE gültig ab November 2024}
+
+\\vspace{2cm}
+")
+```
+
 
 ```{r setup, echo=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -69,7 +91,7 @@ knitr::opts_chunk$set(echo = FALSE)
     }
   }
 ```
-### Erstellt am `r format(Sys.Date(), '%d.%m.%Y')` mit dem Mietspiegelrechner der Stadt Passau
+Diese Berechnung wurde am `r format(Sys.Date(), '%d.%m.%Y')` mit dem auf der Homepage der Stadt Passau unter https://mietspiegel.passau.de/ erreichbaren Mietspiegelrechner erstellt. Dort finden Sie auch weitere Informationen zum Mietspiegel.
 
 ## Adresse/Wohnlage des Objekts: `r paste0(adr, ", Wohnlage ", lage)`
 
@@ -106,7 +128,9 @@ kable(details, "latex", booktabs = TRUE, align = "lccc",
 ```
 
 ### Hinweise zur Berechnung
-Aufbauend auf der eingegebenen Größe der Wohnung von `r sld` m² ergibt sich ein Basiswert von `r pn(oue)` €/m² mit einem Spannenbereich von `r pn(ugr)` - `r pn(ogr)` €/m². Diese Werte werden durch prozentuale Zu-/Abschläge für Lage, Baujahr, Renovierung-/Sanierungszustand, Sanitärausstattung und allgemeine Ausstattung angepasst und ergeben die ortsübliche Vergleichsmiete in €/m². Die Gesamtmiete für die Wohnung ergibt sich aus dieser m²-Miete multipliziert mit der Wohnungsgröße.
+-  Aufbauend auf der anngegebenen Wohnungsgröße (`r sld` m²) ergibt sich ein Basiswert von `r pn(oue)` €/m² mit einem Spannenbereich von `r pn(ugr)` - `r pn(ogr)` €/m².
+-  Diese Werte werden durch prozentuale Zu-/Abschläge für Lage, Baujahr, Renovierung-/Sanierungszustand, Sanitärausstattung und allgemeine Ausstattung angepasst und ergeben die ortsübliche Vergleichsmiete in €/m².
+  Die Gesamtmiete für die Wohnung ergibt sich aus dieser m²-Miete multipliziert mit der Wohnungsgröße.
 
 
 ### Berücksichtigte Angaben
