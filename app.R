@@ -364,7 +364,7 @@ ui <- fluidPage(
         # Button for downloading the report
         downloadButton(
           outputId = "downloadReport",
-          label = "Bericht herunterladen", # Button label
+          label = "Berechnungsprotokoll herunterladen", # Button label
           class = "btn-primary" # Optional styling
         )
       )
@@ -928,7 +928,13 @@ server <- function(input, output, session) {
   #
   output$downloadReport <- downloadHandler(
     filename = function() {
-      "Mietspiegel_Berechnungsprotokoll.pdf"
+      # Replace whitespace in the selected address with underscores
+      address <- if (!is.null(globals$adresse$selection)) {
+        gsub("\\s+", "_", globals$adresse$selection)
+      } else {
+        "Unbekannte_Adresse" # Fallback if no address is selected
+      }
+      paste0("Mietspiegelberechnung_", address, ".pdf")
     },
     content = function(file) {
       rmarkdown::render(
@@ -939,6 +945,7 @@ server <- function(input, output, session) {
       )
     }
   )
+  
 
 
 
