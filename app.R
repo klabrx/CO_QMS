@@ -179,13 +179,13 @@ ui <- fluidPage(
             "",
             "Keine Sanierung/Renovierung bekannt",
             "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
-            "Teilrenovierung"
+            "Teilrenovierung seit 2013 (mind. 3 Maßnahmen)"
           ),
           selected = ""
         ),
         # Step 2: Checkboxes for Teilrenovierung (hidden by default)
         conditionalPanel(
-          condition = "input.renovierung_main == 'Teilrenovierung'",
+          condition = "input.renovierung_main == 'Teilrenovierung seit 2013 (mind. 3 Maßnahmen)'",
           checkboxGroupInput(
             inputId = "renovierung_details",
             label = "Welche Maßnahmen wurden durchgeführt?",
@@ -202,12 +202,10 @@ ui <- fluidPage(
         div(
           id = "renovierung_hint",
           "Bitte machen Sie Angaben zum Renovierungszustand des Objekts. ",
-          "Berücksichtigen Sie dabei, dass eine Vollmodernisierung (Zuschlag 11%) ",
-          "nur angegeben werden kann, wenn sie ab 2013 in einem Objekt mit ",
-          "einem Baujahr vor 1990 durchgeführt wurde. Teilrenovierungen führen ",
-          "ab mindestens 3 Maßnahmen zu einem Zuschlag von 6%, können aber ",
-          "nicht gemeinsam mit einer Vollmodernisierung geltend gemacht werden."
-        ),
+          "Berücksichtigen Sie dabei, dass nur ab 2013 durchgeführte ",
+          "Renovierungen relevant sind, und dass eine Vollmodernisierung ",
+          "(Zuschlag 11%) nur bei Baujahr vor 1990 angegeben werden kann."
+          ),
         # Display renovation factor as output
         htmlOutput("renovierung_factor")
       )
@@ -640,7 +638,7 @@ server <- function(input, output, session) {
         choices = c(
           "",
           "Keine Sanierung/Renovierung bekannt",
-          "Teilrenovierung"
+          "Teilrenovierung seit 2013 (mind. 3 Maßnahmen)"
         )
       )
     } else {
@@ -652,7 +650,7 @@ server <- function(input, output, session) {
           "",
           "Keine Sanierung/Renovierung bekannt",
           "Vollmodernisierung seit 2013 (nur bei Baujahr vor 1990)",
-          "Teilrenovierung"
+          "Teilrenovierung seit 2013 (mind. 3 Maßnahmen)"
         )
       )
     }
@@ -690,7 +688,7 @@ server <- function(input, output, session) {
         globals$renovierung$info_text <- "Vollmodernisierung: <strong>+11%</strong>."
         globals$renovierung$selection <- "Vollmodernisierung"
       }
-    } else if (input$renovierung_main == "Teilrenovierung") {
+    } else if (input$renovierung_main == "Teilrenovierung seit 2013 (mind. 3 Maßnahmen)") {
       # Teilrenovierung: Reset factor and wait for details
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- "Bitte wählen Sie die durchgeführten Maßnahmen aus."
@@ -711,7 +709,7 @@ server <- function(input, output, session) {
                                               "erforderlichen Maßnahmen: <strong>+-0%</strong>")
     } else {
       globals$renovierung$factor <- 0.06
-      globals$renovierung$info_text <- "Teilrenovierung mit mindestens 3 Maßnahmen: <strong>+6%</strong>"
+      globals$renovierung$info_text <- "Teilrenovierung seit 2013 (mind. 3 Maßnahmen): <strong>+6%</strong>"
     }
     # Pass the selected renovation details to the globals
     globals$renovierung$selection <- input$renovierung_details
