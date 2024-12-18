@@ -42,20 +42,20 @@ enable_options <- function(session, input_id, enable_choices) {
 
 
 
-# Sum functions for Zusammenfassung
-sum_ug_values <- function(groesse_ug, adresse_ug, baujahr_ug, renovation_ug, sanitaer_ug, ausstattung_ug) {
-  sum(groesse_ug, adresse_ug, baujahr_ug, renovation_ug, sanitaer_ug, ausstattung_ug, na.rm = TRUE)
-}
+# # Sum functions for Zusammenfassung
+# sum_ug_values <- function(groesse_ug, adresse_ug, baujahr_ug, renovation_ug, sanitaer_ug, ausstattung_ug) {
+#   sum(groesse_ug, adresse_ug, baujahr_ug, renovation_ug, sanitaer_ug, ausstattung_ug, na.rm = TRUE)
+# }
+# 
+# sum_oue_values <- function(groesse_oue, adresse_oue, baujahr_oue, renovation_oue, sanitaer_oue, ausstattung_oue) {
+#   sum(groesse_oue, adresse_oue, baujahr_oue, renovation_oue, sanitaer_oue, ausstattung_oue, na.rm = TRUE)
+# }
+# 
+# sum_og_values <- function(groesse_og, adresse_og, baujahr_og, renovation_og, sanitaer_og, ausstattung_og) {
+#   sum(groesse_og, adresse_og, baujahr_og, renovation_og, sanitaer_og, ausstattung_og, na.rm = TRUE)
+# }
 
-sum_oue_values <- function(groesse_oue, adresse_oue, baujahr_oue, renovation_oue, sanitaer_oue, ausstattung_oue) {
-  sum(groesse_oue, adresse_oue, baujahr_oue, renovation_oue, sanitaer_oue, ausstattung_oue, na.rm = TRUE)
-}
-
-sum_og_values <- function(groesse_og, adresse_og, baujahr_og, renovation_og, sanitaer_og, ausstattung_og) {
-  sum(groesse_og, adresse_og, baujahr_og, renovation_og, sanitaer_og, ausstattung_og, na.rm = TRUE)
-}
-
-showHintIfEmpty <- function(input, input_id, hint_id, row_id, session) {
+check_if_complete <- function(input, input_id, hint_id, row_id, session) {
   observe({
     # Check if the input is null or contains only empty strings
     if (is.null(input[[input_id]]) || all(input[[input_id]] == "")) {
