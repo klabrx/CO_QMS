@@ -205,20 +205,18 @@ format_value <- function(value, unit = "", add_plus = FALSE) {
 # und reagiert auf Veränderungen in den jeweiligen Eingabefeldern.
 check_if_complete <- function(input, input_id, hint_id, row_id, session) {
   observe({
-    # Check if the input is null or contains only empty strings
     if (is.null(input[[input_id]]) || all(input[[input_id]] == "")) {
-      shinyjs::show(hint_id) # Show the hint
+      shinyjs::show(hint_id) 
       shinyjs::runjs(sprintf(
-        "$('#%s').removeClass('framed-row-complete').addClass('framed-row-incomplete');",
+        "$('#%s').removeClass('valid_row').addClass('invalid_row');",
         row_id
       ))
-      # Mark the row as incomplete
     } else {
-      shinyjs::hide(hint_id) # Hide the hint
+      shinyjs::hide(hint_id) 
       shinyjs::runjs(sprintf(
-        "$('#%s').removeClass('framed-row-incomplete').addClass('framed-row-complete');",
+        "$('#%s').removeClass('invalid_row').addClass('valid_row');",
         row_id
-      )) # Mark the row as complete
+      ))
     }
   })
 }
@@ -922,21 +920,19 @@ server <- function(input, output, session) {
       )
       ) {
       if (input$baujahr >= "1990") {
-        # Notify user about invalid selection and reset dropdown
         showNotification(
           paste0(
             "Vollmodernisierung ist nur bei Baujahr vor 1990 möglich."
             ),
           type = "error")
-        updateSelectInput(session, # Reset to empty
+        updateSelectInput(session, # Reste löschen
                           "renovierung_main",
                           selected = ""
                           )
         globals$renovierung$factor <- 0
-        globals$renovierung$info_text <- "" # Reflect incomplete state
+        globals$renovierung$info_text <- ""
         globals$renovierung$selection <- NULL
       } else {
-        # Valid Vollmodernisierung selection
         updateCheckboxGroupInput(session,
                                  "renovierung_details",
                                  selected = character(0)
@@ -950,14 +946,14 @@ server <- function(input, output, session) {
     } else if (
       input$renovierung_main == "Teilrenovierung seit 2013 (mind. 3 Maßnahmen)"
       ) {
-      # Teilrenovierung: Reset factor and wait for details
+      # Teilrenovierung: Zurück auf 0  und auf Details warten
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- paste0(
         "Bitte wählen Sie die durchgeführten Maßnahmen aus."
       )
       globals$renovierung$selection <- NULL
     } else {
-      # Handle empty or invalid input
+      # Fehlende oder unsinnige Eingabe: Zurück auf 0
       globals$renovierung$factor <- 0
       globals$renovierung$info_text <- ""
       globals$renovierung$selection <- NULL
@@ -980,7 +976,7 @@ server <- function(input, output, session) {
         "Teilrenovierung seit 2013 (mind. 3 Maßnahmen): <strong>+6%</strong>"
       )
     }
-    # Pass the selected renovation details to the globals
+    # Angegebene Maßnahmen in globals hinterlegen
     globals$renovierung$selection <- input$renovierung_details
   })
   output$renovierung_factor <- renderText({
@@ -992,7 +988,7 @@ server <- function(input, output, session) {
       is.null(input$sanitaer_main) ||
       input$sanitaer_main == ""
       ) {
-      # No selection: Reset globals
+      # Keine Auswahl: globals zurüksetzen
       updateCheckboxGroupInput(session,
                                "sanitaer_details",
                                selected = character(0))
@@ -1000,7 +996,7 @@ server <- function(input, output, session) {
       globals$sanitaer$info_text <- ""
       globals$sanitaer$selection <- NULL
     } else if (input$sanitaer_main == "Keine besondere Sanitärausstattung") {
-      # Reset details and finalize with 0% for "Keine"
+      # Details zurücksetzen und mit 0% for "Keine" abaschließen
       updateCheckboxGroupInput(session,
                                "sanitaer_details",
                                selected = character(0))
@@ -1017,18 +1013,17 @@ server <- function(input, output, session) {
     }
   })
   observeEvent(input$sanitaer_details, {
-    if (
+    if ( # keine oder weniger als 3 Ausstattungsmerkmale
       is.null(input$sanitaer_details) ||
       length(input$sanitaer_details) < 3
-      ) {
-      # Fewer than 3 valid selections
+      ) { # kein Zuschlag, Anpassung Hinweistext
       globals$sanitaer$factor <- 0
       globals$sanitaer$info_text <- paste0(
         length(input$sanitaer_details),
         " von mind. 3 für einen 6%-Zuschlag",
         " erforderlichen Verbesserungen: <strong>+-0%</strong>"
         )
-    } else {
+    } else { # 3 oder mehr: Zuschlag 6%, Hinweistext
       # At least 3 selections
       globals$sanitaer$factor <- 0.06
       globals$sanitaer$info_text <- paste0(
@@ -1036,7 +1031,7 @@ server <- function(input, output, session) {
         " <strong>+6%</strong>"
         )
     }
-    # Pass the selected sanitär details to the globals
+    # Auswahl in globals speichern
     globals$sanitaer$selection <- input$sanitaer_details
   })
   output$sanitaer_factor <- renderText({
@@ -1044,16 +1039,20 @@ server <- function(input, output, session) {
   })
   #------ Section 'ausstattung' -----
   observeEvent(input$ausstattung_main, {
-    if (is.null(input$ausstattung_main) || input$ausstattung_main == "") {
-      # No selection: Reset globals
+    if ( # Keine Auswahl oder leere Auswahl
+      is.null(input$ausstattung_main) ||
+      input$ausstattung_main == ""
+      ) { # Globals zurücksetzen
       updateCheckboxGroupInput(session,
                                "ausstattung_details",
                                selected = character(0))
       globals$ausstattung$factor <- 0
       globals$ausstattung$info_text <- ""
       globals$ausstattung$selection <- NULL
-    } else if (input$ausstattung_main == "Keine besondere Ausstattung") {
-      # Reset details and finalize with 0% for "Keine"
+    } else if (
+      input$ausstattung_main == "Keine besondere Ausstattung"
+      ) {
+      # Details zurück auf 0% für "Keine", Globals und Hinweistext anpassen
       updateCheckboxGroupInput(session,
                                "ausstattung_details",
                                selected = character(0))
@@ -1063,7 +1062,7 @@ server <- function(input, output, session) {
       )
       globals$ausstattung$selection <- NULL
     } else if (input$ausstattung_main == "Besonderheiten in der Ausstattung") {
-      # Reset factor and wait for details
+      # Zurücksetzen und auf Details warten
       globals$ausstattung$factor <- 0
       globals$ausstattung$info_text <- paste0(
         "Bitte wählen Sie die Ausstattungsmerkmale aus."
@@ -1083,7 +1082,7 @@ server <- function(input, output, session) {
         )
       globals$ausstattung$selection <- NULL
     } else {
-      # Calculate the total factor based on selected options
+      # Gesamtzuschlag berechnen und Hinweistext erstellen
       selected_factors <- ref_ausstattung %>%
         dplyr::filter(Option %in% input$ausstattung_details) %>%
         dplyr::pull(Factor)
