@@ -109,6 +109,12 @@ ref_groesse <- tibble::tribble(
   141L, 150L, 5.82, 7.02, 8.21, "141 bis unter 150 m²"
 )
 
+# Indexfortschreibung 2026:
+index_2026 <- 1.0425 # 4,25%
+
+ref_groesse <- ref_groesse %>%
+  dplyr::mutate(dplyr::across(c(low, mid, hi), ~ round(.x * index_2026, 2)))
+
 # Mögliche Angaben unter "Renovierung"
 ref_renovation <- tibble::tribble(
   ~Option, ~Value,
@@ -238,7 +244,7 @@ ui <- fluidPage(
   div(
     class = "always-visible",
     id = "title-container",
-    titlePanel("Mietspiegelrechner 2024")
+    titlePanel("Mietspiegelrechner 2026")
   ),
   # Main app container, 800px width, centered on the page
   div(

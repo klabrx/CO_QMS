@@ -31,7 +31,7 @@ cat("
 \\noindent
 \\textbf{\\LARGE Ortsübliche Vergleichsmiete nach dem} \\
 \\textbf{\\LARGE qualifizierten Mietspiegel der Stadt Passau,} \\
-\\textbf{\\LARGE gültig ab November 2024}
+\\textbf{\\LARGE fortgeschrieben und gültig ab Januar 2026}
 
 \\vspace{2cm}
 ")
